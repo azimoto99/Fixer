@@ -27,12 +27,12 @@ import {
   sanitizeInput,
 } from './middleware';
 
-// Import routes (will be created later)
-// import authRoutes from './routes/auth';
-// import userRoutes from './routes/users';
-// import jobRoutes from './routes/jobs';
-// import applicationRoutes from './routes/applications';
-// import paymentRoutes from './routes/payments';
+// Import routes
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+import jobRoutes from './routes/jobs';
+import applicationRoutes from './routes/applications';
+import paymentRoutes from './routes/payments';
 // import reviewRoutes from './routes/reviews';
 // import fileRoutes from './routes/files';
 
@@ -102,12 +102,12 @@ apiRouter.get('/health', async (req, res) => {
   }
 });
 
-// Mount API routes (will be uncommented when routes are created)
-// apiRouter.use('/auth', authRoutes);
-// apiRouter.use('/users', userRoutes);
-// apiRouter.use('/jobs', jobRoutes);
-// apiRouter.use('/applications', applicationRoutes);
-// apiRouter.use('/payments', paymentRoutes);
+// Mount API routes
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/users', userRoutes);
+apiRouter.use('/jobs', jobRoutes);
+apiRouter.use('/applications', applicationRoutes);
+apiRouter.use('/payments', paymentRoutes);
 // apiRouter.use('/reviews', reviewRoutes);
 // apiRouter.use('/files', fileRoutes);
 

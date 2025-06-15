@@ -31,14 +31,14 @@ async function testDatabase() {
     // Test basic query
     console.log('🔍 Testing basic query...');
     const result = await db.execute(sql`SELECT 1 as test, NOW() as timestamp`);
-    console.log('✅ Basic query successful:', result.rows[0]);
+    console.log('✅ Basic query successful:', result[0]);
 
     // Test distance function
     console.log('📏 Testing distance calculation function...');
     const distanceResult = await db.execute(sql`
       SELECT calculate_distance_km(37.7749, -122.4194, 37.7849, -122.4094) as distance_km
     `);
-    console.log('✅ Distance function working:', distanceResult.rows[0]);
+    console.log('✅ Distance function working:', distanceResult[0]);
 
     // Test table existence
     console.log('📋 Testing table existence...');
@@ -50,12 +50,12 @@ async function testDatabase() {
       ORDER BY table_name
     `);
     
-    const tableNames = tables.rows.map((row: any) => row.table_name);
+    const tableNames = tables.map((row: any) => row.table_name);
     console.log('✅ Tables found:', tableNames);
 
     const expectedTables = ['users', 'worker_profiles', 'jobs', 'applications', 'payments', 'notifications'];
     const missingTables = expectedTables.filter(table => !tableNames.includes(table));
-    
+
     if (missingTables.length > 0) {
       console.error('❌ Missing tables:', missingTables);
     } else {
@@ -65,38 +65,38 @@ async function testDatabase() {
     // Test enum types
     console.log('🏷️ Testing enum types...');
     const enums = await db.execute(sql`
-      SELECT typname 
-      FROM pg_type 
+      SELECT typname
+      FROM pg_type
       WHERE typtype = 'e'
       ORDER BY typname
     `);
-    
-    const enumNames = enums.rows.map((row: any) => row.typname);
+
+    const enumNames = enums.map((row: any) => row.typname);
     console.log('✅ Enums found:', enumNames);
 
     // Test functions
     console.log('⚙️ Testing database functions...');
     const functions = await db.execute(sql`
-      SELECT routine_name 
-      FROM information_schema.routines 
-      WHERE routine_schema = 'public' 
+      SELECT routine_name
+      FROM information_schema.routines
+      WHERE routine_schema = 'public'
       AND routine_type = 'FUNCTION'
       ORDER BY routine_name
     `);
-    
-    const functionNames = functions.rows.map((row: any) => row.routine_name);
+
+    const functionNames = functions.map((row: any) => row.routine_name);
     console.log('✅ Functions found:', functionNames);
 
     // Test triggers
     console.log('🔄 Testing triggers...');
     const triggers = await db.execute(sql`
-      SELECT trigger_name, event_object_table 
-      FROM information_schema.triggers 
+      SELECT trigger_name, event_object_table
+      FROM information_schema.triggers
       WHERE trigger_schema = 'public'
       ORDER BY trigger_name
     `);
-    
-    console.log('✅ Triggers found:', triggers.rows);
+
+    console.log('✅ Triggers found:', triggers);
 
     console.log('🎉 All database tests passed successfully!');
 
