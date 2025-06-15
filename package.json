@@ -1,0 +1,48 @@
+{
+  "name": "fixer-ecosystem",
+  "version": "1.0.0",
+  "description": "Fixer Two-App Ecosystem - Job posting and worker management platform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:post\" \"npm run dev:work\"",
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "dev:post": "npm run dev --workspace=apps/fixer-post",
+    "dev:work": "npm run dev --workspace=apps/fixer-work",
+    "build": "npm run build --workspaces",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "build:post": "npm run build --workspace=apps/fixer-post",
+    "build:work": "npm run build --workspace=apps/fixer-work",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "clean": "npm run clean --workspaces",
+    "install:all": "npm install && npm install --workspaces"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/fixer-ecosystem.git"
+  },
+  "keywords": [
+    "fixer",
+    "jobs",
+    "marketplace",
+    "react",
+    "nodejs",
+    "typescript",
+    "supabase"
+  ],
+  "author": "Fixer Team",
+  "license": "MIT"
+}
