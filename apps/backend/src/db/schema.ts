@@ -12,7 +12,8 @@ import {
   uniqueIndex,
   check,
 } from 'drizzle-orm/pg-core';
-import { relations, desc } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
@@ -105,7 +106,7 @@ export const workerProfiles = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),
     bio: text('bio'),
-    skills: text('skills').array().default('{}'),
+    skills: text('skills').array().default(sql`'{}'`),
     hourlyRate: decimal('hourly_rate', { precision: 10, scale: 2 }),
     serviceRadiusKm: integer('service_radius_km').default(25),
     locationLat: decimal('location_lat', { precision: 10, scale: 8 }),
@@ -144,7 +145,7 @@ export const jobs = pgTable(
     locationZip: text('location_zip'),
     price: decimal('price', { precision: 10, scale: 2 }).notNull(),
     priceType: priceTypeEnum('price_type').notNull(),
-    requiredSkills: text('required_skills').array().default('{}'),
+    requiredSkills: text('required_skills').array().default(sql`'{}'`),
     status: jobStatusEnum('status').default('open').notNull(),
     urgency: urgencyLevelEnum('urgency').default('normal'),
     estimatedDurationHours: integer('estimated_duration_hours'),
@@ -167,10 +168,10 @@ export const jobs = pgTable(
     categoryIdx: index('idx_jobs_category').on(table.category),
     skillsIdx: index('idx_jobs_skills').on(table.requiredSkills),
     createdAtIdx: index('idx_jobs_created_at').on(table.createdAt),
-    posterRatingCheck: check('poster_rating_check', 
-      `poster_rating >= 1 AND poster_rating <= 5`),
-    workerRatingCheck: check('worker_rating_check', 
-      `worker_rating >= 1 AND worker_rating <= 5`),
+    posterRatingCheck: check('poster_rating_check',
+      sql`poster_rating >= 1 AND poster_rating <= 5`),
+    workerRatingCheck: check('worker_rating_check',
+      sql`worker_rating >= 1 AND worker_rating <= 5`),
   })
 );
 
@@ -207,6 +208,8 @@ export const payments = pgTable(
     amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
     platformFee: decimal('platform_fee', { precision: 10, scale: 2 }).notNull(),
     workerAmount: decimal('worker_amount', { precision: 10, scale: 2 }).notNull(),
+    currency: text('currency').default('usd').notNull(),
+    description: text('description'),
     stripePaymentIntentId: text('stripe_payment_intent_id').unique(),
     stripeTransferId: text('stripe_transfer_id'),
     paymentMethodId: text('payment_method_id'),

@@ -8,6 +8,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "noEmit": false,
+    "allowImportingTsExtensions": false,
     "module": "CommonJS",
     "moduleResolution": "node",
     "target": "ES2022",

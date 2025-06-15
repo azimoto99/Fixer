@@ -58,9 +58,10 @@ export type {
   PaginationRequest,
   SortRequest,
   SearchRequest,
-  HttpStatus,
-  ErrorCode,
 } from './types';
+
+// Export enums as values
+export { HttpStatus, ErrorCode } from './types';
 
 // Main schema exports
 export {

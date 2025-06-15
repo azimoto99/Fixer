@@ -185,7 +185,7 @@ export function requireOwnership(getResourceUserId: (req: Request) => string | P
       }
 
       const resourceUserId = await getResourceUserId(req);
-      
+
       if (req.user.id !== resourceUserId && req.user.role !== 'admin') {
         res.status(HttpStatus.FORBIDDEN).json({
           success: false,
@@ -210,3 +210,6 @@ export function requireOwnership(getResourceUserId: (req: Request) => string | P
     }
   };
 }
+
+// Main auth middleware alias
+export const authMiddleware = authenticateToken;
