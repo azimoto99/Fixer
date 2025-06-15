@@ -19,12 +19,21 @@
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
     "clean": "npm run clean --workspaces",
-    "install:all": "npm install && npm install --workspaces"
+    "install:all": "npm install && npm install --workspaces",
+    "db:init": "npm run db:init --workspace=apps/backend",
+    "db:setup": "npm run db:setup --workspace=apps/backend",
+    "db:reset": "npm run db:reset --workspace=apps/backend",
+    "db:verify": "npm run db:verify --workspace=apps/backend",
+    "db:generate": "npm run db:generate --workspace=apps/backend",
+    "db:migrate": "npm run db:migrate --workspace=apps/backend",
+    "db:studio": "npm run db:studio --workspace=apps/backend",
+    "test:db": "npm run test:db --workspace=apps/backend",
+    "generate:secrets": "npm run generate:secrets --workspace=apps/backend"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
     "@types/node": "^20.0.0",
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.0",
+    "typescript": "^5.0.0"
   },
   "engines": {
     "node": ">=18.0.0",
@@ -44,5 +53,8 @@
     "supabase"
   ],
   "author": "Fixer Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.5.0"
+  }
 }

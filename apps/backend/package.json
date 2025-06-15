@@ -16,10 +16,13 @@
     "db:generate": "drizzle-kit generate:pg",
     "db:migrate": "drizzle-kit push:pg",
     "db:studio": "drizzle-kit studio",
-    "db:setup": "tsx src/scripts/setup-database.ts",
-    "db:reset": "tsx src/scripts/setup-database.ts reset",
-    "db:verify": "tsx src/scripts/setup-database.ts verify",
-    "db:introspect": "drizzle-kit introspect:pg"
+    "db:init": "tsx src/scripts/init-database.ts init",
+    "db:setup": "tsx src/scripts/init-database.ts setup",
+    "db:reset": "tsx src/scripts/init-database.ts reset",
+    "db:verify": "tsx src/scripts/init-database.ts verify",
+    "db:introspect": "drizzle-kit introspect:pg",
+    "test:db": "tsx src/scripts/test-database.ts all",
+    "generate:secrets": "tsx src/scripts/generate-secrets.ts"
   },
   "dependencies": {
     "express": "^4.18.0",

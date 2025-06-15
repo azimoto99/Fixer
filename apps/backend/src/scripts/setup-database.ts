@@ -1,12 +1,16 @@
 #!/usr/bin/env tsx
 
+// Load environment variables first
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { config } from '../config/env';
-import { 
-  testDatabaseConnection, 
-  runMigrations, 
+import {
+  testDatabaseConnection,
   closeDatabaseConnection,
-  db 
+  db
 } from '../config/database';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { sql } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
@@ -29,23 +33,27 @@ async function setupDatabase() {
 
     // Run Drizzle migrations
     console.log('📦 Running Drizzle migrations...');
-    await runMigrations();
+    await migrate(db, { migrationsFolder: path.join(__dirname, '../../drizzle') });
 
     // Apply database functions and triggers
     console.log('⚙️ Setting up database functions and triggers...');
-    const functionsSQL = fs.readFileSync(
-      path.join(__dirname, '../../src/db/functions.sql'),
-      'utf8'
-    );
-    await db.execute(sql.raw(functionsSQL));
+    const functionsPath = path.join(__dirname, '../db/functions.sql');
+    if (fs.existsSync(functionsPath)) {
+      const functionsSQL = fs.readFileSync(functionsPath, 'utf8');
+      await db.execute(sql.raw(functionsSQL));
+    } else {
+      console.warn('⚠️ Functions SQL file not found, skipping...');
+    }
 
     // Apply RLS policies
     console.log('🔒 Setting up Row Level Security policies...');
-    const rlsSQL = fs.readFileSync(
-      path.join(__dirname, '../../src/db/rls-policies.sql'),
-      'utf8'
-    );
-    await db.execute(sql.raw(rlsSQL));
+    const rlsPath = path.join(__dirname, '../db/rls-policies.sql');
+    if (fs.existsSync(rlsPath)) {
+      const rlsSQL = fs.readFileSync(rlsPath, 'utf8');
+      await db.execute(sql.raw(rlsSQL));
+    } else {
+      console.warn('⚠️ RLS policies SQL file not found, skipping...');
+    }
 
     // Verify setup
     console.log('✅ Verifying database setup...');

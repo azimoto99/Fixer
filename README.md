@@ -93,24 +93,32 @@ fixer/
 - **Stripe** account (for payments)
 - **Mapbox** account (for maps)
 
-### Installation
+### Quick Start
 
-1. **Clone the repository**
+📋 **For detailed setup instructions, see [`SETUP.md`](SETUP.md)**
+
+1. **Clone and install**
    ```bash
-git clone <repository-url>
+   git clone <repository-url>
    cd fixer
-```
+   npm install
+   ```
 
-2. **Install dependencies**
+2. **Configure environment**
    ```bash
-npm install
-```
+   cp apps/backend/.env.example apps/backend/.env
+   # Edit apps/backend/.env with your Supabase credentials
+   ```
 
-3. **Set up environment variables**
+3. **Initialize database**
    ```bash
-cp .env.example .env
-   # Fill in your actual values in .env
-```
+   npm run db:init
+   ```
+
+4. **Start development**
+   ```bash
+   npm run dev
+   ```
 
 4. **Set up Supabase**
    - Create a new Supabase project
