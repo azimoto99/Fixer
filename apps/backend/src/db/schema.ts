@@ -12,7 +12,7 @@ import {
   uniqueIndex,
   check,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, desc } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
@@ -105,7 +105,7 @@ export const workerProfiles = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),
     bio: text('bio'),
-    skills: text('skills').array().default([]),
+    skills: text('skills').array().default('{}'),
     hourlyRate: decimal('hourly_rate', { precision: 10, scale: 2 }),
     serviceRadiusKm: integer('service_radius_km').default(25),
     locationLat: decimal('location_lat', { precision: 10, scale: 8 }),
@@ -122,7 +122,7 @@ export const workerProfiles = pgTable(
   (table) => ({
     userIdIdx: index('idx_worker_profiles_user_id').on(table.userId),
     locationIdx: index('idx_worker_profiles_location').on(table.locationLat, table.locationLng),
-    skillsIdx: index('idx_worker_profiles_skills').using('gin', table.skills),
+    skillsIdx: index('idx_worker_profiles_skills').on(table.skills),
   })
 );
 
@@ -144,7 +144,7 @@ export const jobs = pgTable(
     locationZip: text('location_zip'),
     price: decimal('price', { precision: 10, scale: 2 }).notNull(),
     priceType: priceTypeEnum('price_type').notNull(),
-    requiredSkills: text('required_skills').array().default([]),
+    requiredSkills: text('required_skills').array().default('{}'),
     status: jobStatusEnum('status').default('open').notNull(),
     urgency: urgencyLevelEnum('urgency').default('normal'),
     estimatedDurationHours: integer('estimated_duration_hours'),
@@ -165,8 +165,8 @@ export const jobs = pgTable(
     statusIdx: index('idx_jobs_status').on(table.status),
     locationIdx: index('idx_jobs_location').on(table.locationLat, table.locationLng),
     categoryIdx: index('idx_jobs_category').on(table.category),
-    skillsIdx: index('idx_jobs_skills').using('gin', table.requiredSkills),
-    createdAtIdx: index('idx_jobs_created_at').on(table.createdAt.desc()),
+    skillsIdx: index('idx_jobs_skills').on(table.requiredSkills),
+    createdAtIdx: index('idx_jobs_created_at').on(table.createdAt),
     posterRatingCheck: check('poster_rating_check', 
       `poster_rating >= 1 AND poster_rating <= 5`),
     workerRatingCheck: check('worker_rating_check', 
@@ -224,6 +224,26 @@ export const payments = pgTable(
     workerIdIdx: index('idx_payments_worker_id').on(table.workerId),
     statusIdx: index('idx_payments_status').on(table.status),
     stripePaymentIntentIdx: index('idx_payments_stripe_payment_intent').on(table.stripePaymentIntentId),
+  })
+);
+
+// Notifications table
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    title: text('title').notNull(),
+    message: text('message').notNull(),
+    type: notificationTypeEnum('type').notNull(),
+    data: jsonb('data'), // Additional context data
+    read: boolean('read').default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('idx_notifications_user_id').on(table.userId),
+    readIdx: index('idx_notifications_read').on(table.read),
+    createdAtIdx: index('idx_notifications_created_at').on(table.createdAt),
   })
 );
 
@@ -391,22 +411,4 @@ export type NewPayment = typeof payments.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 
-// Notifications table
-export const notifications = pgTable(
-  'notifications',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-    title: text('title').notNull(),
-    message: text('message').notNull(),
-    type: notificationTypeEnum('type').notNull(),
-    data: jsonb('data'), // Additional context data
-    read: boolean('read').default(false),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => ({
-    userIdIdx: index('idx_notifications_user_id').on(table.userId),
-    readIdx: index('idx_notifications_read').on(table.read),
-    createdAtIdx: index('idx_notifications_created_at').on(table.createdAt.desc()),
-  })
-);
+
