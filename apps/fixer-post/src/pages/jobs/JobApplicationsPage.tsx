@@ -62,15 +62,15 @@ export function JobApplicationsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'accepted':
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
       case 'rejected':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       case 'withdrawn':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-secondary text-secondary-foreground';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-secondary text-secondary-foreground';
     }
   };
 

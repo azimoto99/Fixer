@@ -109,7 +109,7 @@ export function MapView({ jobs, userLocation }: MapViewProps) {
         .setHTML(`
           <div class="map-popup">
             <h3 class="font-medium text-sm">${job.title}</h3>
-            <div class="text-xs text-gray-500">${job.category}</div>
+            <div class="text-xs text-muted-foreground">${job.category}</div>
             <div class="text-xs font-medium mt-1">$${displayPrice}${budgetSuffix}</div>
           </div>
         `);
@@ -156,10 +156,10 @@ export function MapView({ jobs, userLocation }: MapViewProps) {
       
       {/* Map loading indicator */}
       {!mapLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/75">
           <div className="text-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-sm text-gray-600">Loading map...</p>
+            <p className="mt-2 text-sm text-muted-foreground">Loading map...</p>
           </div>
         </div>
       )}

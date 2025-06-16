@@ -21,7 +21,7 @@ export const JobsPage: React.FC = () => {
   if (errorMessage) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-red-500">{errorMessage}</div>
+        <div className="text-destructive">{errorMessage}</div>
       </div>
     );
   }
@@ -35,8 +35,8 @@ export const JobsPage: React.FC = () => {
             onClick={() => setViewMode('list')}
             className={`px-4 py-2 rounded-md ${
               viewMode === 'list'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-700'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-secondary-foreground'
             }`}
           >
             List View
@@ -45,8 +45,8 @@ export const JobsPage: React.FC = () => {
             onClick={() => setViewMode('map')}
             className={`px-4 py-2 rounded-md ${
               viewMode === 'map'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-700'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-secondary-foreground'
             }`}
           >
             Map View
@@ -60,7 +60,7 @@ export const JobsPage: React.FC = () => {
             <JobCard key={job.id} {...job} />
           ))}
           {jobs.length === 0 && (
-            <div className="col-span-full text-center text-gray-500 py-8">
+            <div className="col-span-full text-center text-muted-foreground py-8">
               No jobs available at the moment.
             </div>
           )}

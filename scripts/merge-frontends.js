@@ -97,7 +97,7 @@ const redirectsContent = `
 /find-work/*                /work/index.html    200
 
 # API routes (proxy to backend)
-/api/*                      https://fixer-backend.onrender.com/api/:splat  200
+/api/*                      https://fixer-backend-api.onrender.com/api/:splat  200
 `;
 
 fs.writeFileSync(path.join(distDir, '_redirects'), redirectsContent.trim());

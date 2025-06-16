@@ -164,10 +164,10 @@ export function JobLocationMap({ jobLocation, userLocation }: JobLocationMapProp
       
       {/* Map loading indicator */}
       {!mapLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/75">
           <div className="text-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-sm text-gray-600">Loading map...</p>
+            <p className="mt-2 text-sm text-muted-foreground">Loading map...</p>
           </div>
         </div>
       )}

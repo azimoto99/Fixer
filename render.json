@@ -1,0 +1,10 @@
+{
+  "services": [
+    {
+      "type": "static",
+      "name": "fixer-frontend",
+      "buildCommand": "npm ci && npm run build:shared && npm run build:post && npm run build:work && node scripts/merge-frontends.js",
+      "staticPublishPath": "./dist-merged"
+    }
+  ]
+}

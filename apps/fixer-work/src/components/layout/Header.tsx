@@ -7,7 +7,7 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   return (
-    <header className="border-b bg-white">
+    <header className="border-b bg-card">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo */}

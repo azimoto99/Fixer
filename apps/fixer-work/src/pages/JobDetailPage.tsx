@@ -110,7 +110,7 @@ export const JobDetailPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold mb-4">{job.title}</h1>
           
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-card rounded-lg shadow-md p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Job Details</h2>
             <div className="space-y-3">
               <div>
@@ -138,7 +138,7 @@ export const JobDetailPage: React.FC = () => {
                   job.urgency === 'urgent' ? 'bg-red-100 text-red-800' :
                   job.urgency === 'high' ? 'bg-orange-100 text-orange-800' :
                   job.urgency === 'medium' ? 'bg-blue-100 text-blue-800' :
-                  'bg-gray-100 text-gray-800'
+                  'bg-secondary text-secondary-foreground'
                 }`}>
                   {job.urgency}
                 </span>
@@ -154,21 +154,21 @@ export const JobDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-card rounded-lg shadow-md p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Description</h2>
-            <p className="text-gray-700 whitespace-pre-wrap">{job.description}</p>
+            <p className="text-foreground whitespace-pre-wrap">{job.description}</p>
           </div>
 
           <button
             onClick={handleApplyToJob}
-            className="w-full bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 transition-colors"
+            className="w-full bg-primary text-primary-foreground py-3 px-6 rounded-lg hover:bg-primary/90 transition-colors"
           >
             Apply for This Job
           </button>
         </div>
 
         <div>
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-card rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">Location</h2>
             <JobLocationMap 
               jobLocation={{

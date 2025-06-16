@@ -128,7 +128,7 @@ export function DashboardPage() {
                   <p className="text-sm text-muted-foreground">Posted 2 weeks ago</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-medium text-gray-600">Completed</div>
+                  <div className="text-sm font-medium text-muted-foreground">Completed</div>
                   <div className="text-xs text-muted-foreground">$100 budget</div>
                 </div>
               </div>
