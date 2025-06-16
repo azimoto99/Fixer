@@ -42,86 +42,40 @@ if (fs.existsSync(workBuildDir)) {
   process.exit(1);
 }
 
-// Create a root index.html that redirects to the main app
-const rootIndexHtml = `
-<!DOCTYPE html>
+// Copy the static landing page instead of creating inline HTML
+const landingPageSource = path.join(__dirname, '../static-landing/index.html');
+const landingPageDest = path.join(distDir, 'index.html');
+
+if (fs.existsSync(landingPageSource)) {
+  fs.copyFileSync(landingPageSource, landingPageDest);
+  console.log('✅ Copied landing page to root');
+} else {
+  console.error('❌ Landing page not found, creating basic one');
+  // Fallback to basic landing page
+  const basicLanding = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fixer - Connecting Builders</title>
-  <meta http-equiv="refresh" content="0; url=/dashboard">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    .container {
-      text-align: center;
-    }
-    .logo {
-      font-size: 2.5rem;
-      font-weight: bold;
-      margin-bottom: 1rem;
-    }
-    .subtitle {
-      font-size: 1.2rem;
-      opacity: 0.9;
-      margin-bottom: 2rem;
-    }
-    .links {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-    }
-    .link {
-      padding: 0.75rem 1.5rem;
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 8px;
-      color: white;
-      text-decoration: none;
-      transition: all 0.3s ease;
-    }
-    .link:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: translateY(-2px);
-    }
-  </style>
+  <title>Fixer - Connect Builders & Creators</title>
 </head>
 <body>
-  <div class="container">
-    <div class="logo">🔧 Fixer</div>
-    <div class="subtitle">Connecting Builders & Creators</div>
-    <div class="links">
-      <a href="/dashboard" class="link">Post Jobs</a>
-      <a href="/work" class="link">Find Work</a>
-    </div>
-  </div>
-  <script>
-    // Redirect to dashboard after 2 seconds
-    setTimeout(() => {
-      window.location.href = '/dashboard';
-    }, 2000);
-  </script>
+  <h1>🔧 Fixer</h1>
+  <p><a href="/dashboard">Post Jobs</a> | <a href="/work">Find Work</a></p>
 </body>
-</html>
-`;
-
-fs.writeFileSync(path.join(distDir, 'index.html'), rootIndexHtml);
-console.log('✅ Created root index.html');
+</html>`;
+  fs.writeFileSync(landingPageDest, basicLanding);
+  console.log('✅ Created basic landing page');
+}
 
 // Create _redirects file for client-side routing
 const redirectsContent = `
 # Fixer App Redirects
+
+# Root landing page
+/                           /index.html         200
+
 # Main app (job posting) routes
-/                           /post/index.html    200
 /dashboard                  /post/index.html    200
 /dashboard/*                /post/index.html    200
 /jobs                       /post/index.html    200
@@ -144,9 +98,6 @@ const redirectsContent = `
 
 # API routes (proxy to backend)
 /api/*                      https://fixer-backend.onrender.com/api/:splat  200
-
-# Fallback
-/*                          /post/index.html    200
 `;
 
 fs.writeFileSync(path.join(distDir, '_redirects'), redirectsContent.trim());

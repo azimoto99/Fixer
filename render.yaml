@@ -50,10 +50,12 @@ services:
       node scripts/merge-frontends.js
     staticPublishPath: ./dist-merged
     routes:
-      # Main app (fixer-post) routes
+      # Root landing page
       - type: rewrite
         source: /
-        destination: /post/index.html
+        destination: /index.html
+      
+      # Main app (fixer-post) routes
       - type: rewrite
         source: /dashboard*
         destination: /post/index.html
@@ -85,7 +87,7 @@ services:
         destination: /work/index.html
       
       # API proxy to backend
-      - type: rewrite
+      - type: proxy
         source: /api/*
         destination: https://fixer-backend.onrender.com/api/*
     

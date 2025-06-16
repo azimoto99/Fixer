@@ -14,7 +14,7 @@
     "dev:work": "npm run dev --workspace=apps/fixer-work",
     "build": "npm run build:shared && npm run build:apps",
     "build:shared": "npm run build --workspace=packages/shared",
-    "build:apps": "npm run build --workspace=apps/backend && npm run build --workspace=apps/fixer-post && npm run build --workspace=apps/fixer-work",
+    "build:apps": "npm run build:backend && npm run build:post && npm run build:work",
     "build:backend": "npm run build --workspace=apps/backend",
     "build:post": "npm run build --workspace=apps/fixer-post",
     "build:work": "npm run build --workspace=apps/fixer-work",

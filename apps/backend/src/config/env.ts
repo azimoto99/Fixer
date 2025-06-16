@@ -30,7 +30,7 @@ const envSchema = z.object({
   STRIPE_CONNECT_CLIENT_ID: z.string().optional(),
 
   // Security
-  CORS_ORIGINS: z.string().default('http://localhost:5173,http://localhost:5174'),
+  CORS_ORIGINS: z.string().default('http://localhost:5173,http://localhost:5174,https://fixer.gg,https://www.fixer.gg'),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000), // 15 minutes
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
