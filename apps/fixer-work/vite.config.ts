@@ -5,6 +5,7 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: process.env.NODE_ENV === 'production' ? '/work/' : '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -33,6 +34,7 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
   },
+  // @ts-ignore - Vitest config
   test: {
     globals: true,
     environment: 'jsdom',

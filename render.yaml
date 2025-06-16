@@ -1,0 +1,108 @@
+services:
+  # Backend API Service
+  - type: web
+    name: fixer-backend
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: |
+      npm ci
+      npm run build:shared
+      npm run build:backend
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fixer-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: /api/*
+
+  # Static Site for Both Frontends
+  - type: static
+    name: fixer-frontend
+    runtime: static
+    plan: starter
+    region: oregon
+    buildCommand: |
+      npm ci
+      npm run build:shared
+      npm run build:post
+      npm run build:work
+      node scripts/merge-frontends.js
+    staticPublishPath: ./dist-merged
+    routes:
+      # Main app (fixer-post) routes
+      - type: rewrite
+        source: /
+        destination: /post/index.html
+      - type: rewrite
+        source: /dashboard*
+        destination: /post/index.html
+      - type: rewrite
+        source: /jobs*
+        destination: /post/index.html
+      - type: rewrite
+        source: /payments*
+        destination: /post/index.html
+      - type: rewrite
+        source: /profile*
+        destination: /post/index.html
+      - type: rewrite
+        source: /auth/*
+        destination: /post/index.html
+      - type: rewrite
+        source: /enterprise*
+        destination: /post/index.html
+      - type: rewrite
+        source: /notifications*
+        destination: /post/index.html
+      
+      # Worker app (fixer-work) routes
+      - type: rewrite
+        source: /work*
+        destination: /work/index.html
+      - type: rewrite
+        source: /find-work*
+        destination: /work/index.html
+      
+      # API proxy to backend
+      - type: rewrite
+        source: /api/*
+        destination: https://fixer-backend.onrender.com/api/*
+    
+    headers:
+      - source: "/(.*)"
+        headers:
+          - key: X-Content-Type-Options
+            value: nosniff
+          - key: X-Frame-Options
+            value: DENY
+          - key: X-XSS-Protection
+            value: 1; mode=block
+
+# Database
+databases:
+  - name: fixer-db
+    databaseName: fixer
+    user: fixer
+    plan: starter
+    region: oregon
