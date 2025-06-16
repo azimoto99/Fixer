@@ -12,6 +12,7 @@ import { JobsPage } from '@/pages/jobs/JobsPage';
 import { CreateJobPage } from '@/pages/jobs/CreateJobPage';
 import { JobDetailPage } from '@/pages/jobs/JobDetailPage';
 import { ProfilePage } from '@/pages/profile/ProfilePage';
+import EnterpriseDashboard from '@/pages/EnterpriseDashboard';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 // Protected route wrapper
@@ -56,6 +57,12 @@ function App() {
             <Route path="profile" element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="enterprise" element={
+              <ProtectedRoute>
+                <EnterpriseDashboard />
               </ProtectedRoute>
             } />
             

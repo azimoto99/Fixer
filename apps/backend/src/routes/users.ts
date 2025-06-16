@@ -87,7 +87,7 @@ router.get('/profile', authMiddleware, async (req: Request, res: Response) => {
         email: userProfile.email,
         createdAt: userProfile.createdAt,
         updatedAt: userProfile.updatedAt,
-        workerProfile: userProfile.workerProfile.id ? userProfile.workerProfile : null,
+        workerProfile: userProfile.workerProfile?.id ? userProfile.workerProfile : null,
       }
     });
 
@@ -231,7 +231,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         fullName: userProfile.fullName,
         avatarUrl: userProfile.avatarUrl,
         createdAt: userProfile.createdAt,
-        workerProfile: userProfile.workerProfile.id ? userProfile.workerProfile : null,
+        workerProfile: userProfile.workerProfile?.id ? userProfile.workerProfile : null,
       }
     });
 

@@ -114,7 +114,7 @@ export function MapView({ jobs, userLocation }: MapViewProps) {
       
       // Create marker
       const marker = new mapboxgl.Marker(el)
-        .setLngLat([job.locationLng || -122.4194, job.locationLat || 37.7749])
+        .setLngLat([job.location.longitude || -122.4194, job.location.latitude || 37.7749])
         .setPopup(popup)
         .addTo(map.current!);
       
@@ -131,7 +131,7 @@ export function MapView({ jobs, userLocation }: MapViewProps) {
       const bounds = new mapboxgl.LngLatBounds();
       
       jobs.forEach(job => {
-        bounds.extend([job.locationLng || -122.4194, job.locationLat || 37.7749]);
+        bounds.extend([job.location.longitude || -122.4194, job.location.latitude || 37.7749]);
       });
       
       // Add user location to bounds if available

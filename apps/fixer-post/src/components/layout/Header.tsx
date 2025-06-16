@@ -54,6 +54,12 @@ export function Header() {
               >
                 My Jobs
               </Link>
+              <Link 
+                to="/enterprise" 
+                className="text-sm font-medium transition-colors hover:text-primary"
+              >
+                Enterprise
+              </Link>
               <Button asChild size="sm">
                 <Link to="/jobs/create">
                   <Plus className="h-4 w-4 mr-2" />

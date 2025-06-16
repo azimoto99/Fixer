@@ -92,7 +92,7 @@ async function verifyDatabaseSetup() {
       'notifications'
     ];
 
-    const existingTables = tables.rows.map((row: any) => row.table_name);
+    const existingTables = (tables as any).map((row: any) => row.table_name);
     const missingTables = expectedTables.filter(table => !existingTables.includes(table));
 
     if (missingTables.length > 0) {
@@ -119,7 +119,7 @@ async function verifyDatabaseSetup() {
       'cleanup_old_notifications'
     ];
 
-    const existingFunctions = functions.rows.map((row: any) => row.routine_name);
+    const existingFunctions = (functions as any).map((row: any) => row.routine_name);
     const missingFunctions = expectedFunctions.filter(func => !existingFunctions.includes(func));
 
     if (missingFunctions.length > 0) {
@@ -136,11 +136,11 @@ async function verifyDatabaseSetup() {
       AND rowsecurity = true
     `);
 
-    console.log(`✅ RLS enabled on ${rlsStatus.rows.length} tables`);
+    console.log(`✅ RLS enabled on ${(rlsStatus as any).length} tables`);
 
     // Test a simple query
     const testQuery = await db.execute(sql`SELECT 1 as test`);
-    if (testQuery.rows[0]?.test !== 1) {
+    if ((testQuery as any)[0]?.test !== 1) {
       throw new Error('Database query test failed');
     }
 

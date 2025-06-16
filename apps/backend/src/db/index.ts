@@ -1,4 +1,4 @@
-import { eq, and, or, desc, asc, sql, count, avg } from 'drizzle-orm';
+import { eq, and, or, desc, sql, count, avg } from 'drizzle-orm';
 import { db, withTransaction } from '../config/database';
 import * as schema from './schema';
 import type { 
@@ -123,7 +123,7 @@ export const userQueries = {
     const result = await db
       .delete(schema.users)
       .where(eq(schema.users.id, id));
-    return result.rowCount > 0;
+    return result.length > 0;
   },
 };
 
@@ -152,7 +152,16 @@ export const workerProfileQueries = {
     radiusKm: number = 25,
     skills?: string[]
   ) {
-    let query = db
+    const conditions = [
+      eq(schema.workerProfiles.isAvailable, true),
+      sql`calculate_distance_km(${lat}, ${lng}, ${schema.workerProfiles.locationLat}, ${schema.workerProfiles.locationLng}) <= ${radiusKm}`
+    ];
+
+    if (skills && skills.length > 0) {
+      conditions.push(sql`${schema.workerProfiles.skills} && ${skills}`);
+    }
+
+    return await db
       .select({
         profile: schema.workerProfiles,
         user: schema.users,
@@ -160,20 +169,8 @@ export const workerProfileQueries = {
       })
       .from(schema.workerProfiles)
       .innerJoin(schema.users, eq(schema.workerProfiles.userId, schema.users.id))
-      .where(
-        and(
-          eq(schema.workerProfiles.isAvailable, true),
-          sql`calculate_distance_km(${lat}, ${lng}, ${schema.workerProfiles.locationLat}, ${schema.workerProfiles.locationLng}) <= ${radiusKm}`
-        )
-      );
-
-    if (skills && skills.length > 0) {
-      query = query.where(
-        sql`${schema.workerProfiles.skills} && ${skills}`
-      );
-    }
-
-    return await query.orderBy(sql`distance`);
+      .where(and(...conditions))
+      .orderBy(sql`distance`);
   },
 
   /**
@@ -248,17 +245,6 @@ export const jobQueries = {
     page?: number;
     limit?: number;
   }) {
-    let query = db
-      .select({
-        job: schema.jobs,
-        poster: schema.users,
-        distance: filters.lat && filters.lng 
-          ? sql<number>`calculate_distance_km(${filters.lat}, ${filters.lng}, ${schema.jobs.locationLat}, ${schema.jobs.locationLng})`
-          : sql<number>`0`,
-      })
-      .from(schema.jobs)
-      .innerJoin(schema.users, eq(schema.jobs.posterId, schema.users.id));
-
     const conditions = [];
 
     if (filters.status) {
@@ -287,65 +273,101 @@ export const jobQueries = {
       );
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    // Add ordering
-    if (filters.lat && filters.lng) {
-      query = query.orderBy(sql`distance`);
-    } else {
-      query = query.orderBy(desc(schema.jobs.createdAt));
-    }
-
     // Add pagination
     const page = filters.page || 1;
     const limit = Math.min(filters.limit || 20, 100);
     const offset = (page - 1) * limit;
 
-    return await query.limit(limit).offset(offset);
+    // Build the complete query based on conditions
+    if (conditions.length > 0) {
+      if (filters.lat && filters.lng) {
+        return await db
+          .select({
+            job: schema.jobs,
+            poster: schema.users,
+            distance: sql<number>`calculate_distance_km(${filters.lat}, ${filters.lng}, ${schema.jobs.locationLat}, ${schema.jobs.locationLng})`,
+          })
+          .from(schema.jobs)
+          .innerJoin(schema.users, eq(schema.jobs.posterId, schema.users.id))
+          .where(and(...conditions))
+          .orderBy(sql`distance`)
+          .limit(limit)
+          .offset(offset);
+      } else {
+        return await db
+          .select({
+            job: schema.jobs,
+            poster: schema.users,
+            distance: sql<number>`0`,
+          })
+          .from(schema.jobs)
+          .innerJoin(schema.users, eq(schema.jobs.posterId, schema.users.id))
+          .where(and(...conditions))
+          .orderBy(desc(schema.jobs.createdAt))
+          .limit(limit)
+          .offset(offset);
+      }
+    } else {
+      if (filters.lat && filters.lng) {
+        return await db
+          .select({
+            job: schema.jobs,
+            poster: schema.users,
+            distance: sql<number>`calculate_distance_km(${filters.lat}, ${filters.lng}, ${schema.jobs.locationLat}, ${schema.jobs.locationLng})`,
+          })
+          .from(schema.jobs)
+          .innerJoin(schema.users, eq(schema.jobs.posterId, schema.users.id))
+          .orderBy(sql`distance`)
+          .limit(limit)
+          .offset(offset);
+      } else {
+        return await db
+          .select({
+            job: schema.jobs,
+            poster: schema.users,
+            distance: sql<number>`0`,
+          })
+          .from(schema.jobs)
+          .innerJoin(schema.users, eq(schema.jobs.posterId, schema.users.id))
+          .orderBy(desc(schema.jobs.createdAt))
+          .limit(limit)
+          .offset(offset);
+      }
+    }
   },
 
   /**
    * Find jobs by poster ID
    */
   async findByPosterId(posterId: string, status?: string) {
-    let query = db
-      .select()
-      .from(schema.jobs)
-      .where(eq(schema.jobs.posterId, posterId));
-
+    const conditions = [eq(schema.jobs.posterId, posterId)];
+    
     if (status) {
-      query = query.where(
-        and(
-          eq(schema.jobs.posterId, posterId),
-          eq(schema.jobs.status, status as any)
-        )
-      );
+      conditions.push(eq(schema.jobs.status, status as any));
     }
 
-    return await query.orderBy(desc(schema.jobs.createdAt));
+    return await db
+      .select()
+      .from(schema.jobs)
+      .where(and(...conditions))
+      .orderBy(desc(schema.jobs.createdAt));
   },
 
   /**
    * Find jobs by worker ID
    */
   async findByWorkerId(workerId: string, status?: string) {
-    let query = db
-      .select()
-      .from(schema.jobs)
-      .where(eq(schema.jobs.workerId, workerId));
-
+    const conditions = [eq(schema.jobs.workerId, workerId)];
+    
     if (status) {
-      query = query.where(
-        and(
-          eq(schema.jobs.workerId, workerId),
-          eq(schema.jobs.status, status as any)
-        )
-      );
+      conditions.push(eq(schema.jobs.status, status as any));
     }
 
-    return await query.orderBy(desc(schema.jobs.createdAt));
+    return await db
+      .select()
+      .from(schema.jobs)
+      .where(and(...conditions))
+      .orderBy(desc(schema.jobs.createdAt));
   },
 
   /**
@@ -378,31 +400,43 @@ export const jobQueries = {
     const result = await db
       .delete(schema.jobs)
       .where(eq(schema.jobs.id, id));
-    return result.rowCount > 0;
+    return result.length > 0;
   },
 
   /**
    * Get job statistics
    */
   async getStats(posterId?: string) {
-    let query = db
-      .select({
-        total: count(),
-        avgPrice: avg(schema.jobs.price),
-        statusCounts: sql<Record<string, number>>`
-          json_object_agg(
-            status, 
-            count(*)
-          )
-        `,
-      })
-      .from(schema.jobs);
-
     if (posterId) {
-      query = query.where(eq(schema.jobs.posterId, posterId));
+      return await db
+        .select({
+          total: count(),
+          avgPrice: avg(schema.jobs.price),
+          statusCounts: sql<Record<string, number>>`
+            json_object_agg(
+              status, 
+              count(*)
+            )
+          `,
+        })
+        .from(schema.jobs)
+        .where(eq(schema.jobs.posterId, posterId))
+        .then(rows => rows[0]);
+    } else {
+      return await db
+        .select({
+          total: count(),
+          avgPrice: avg(schema.jobs.price),
+          statusCounts: sql<Record<string, number>>`
+            json_object_agg(
+              status, 
+              count(*)
+            )
+          `,
+        })
+        .from(schema.jobs)
+        .then(rows => rows[0]);
     }
-
-    return await query.then(rows => rows[0]);
   },
 };
 
@@ -443,7 +477,13 @@ export const applicationQueries = {
    * Find applications by worker ID
    */
   async findByWorkerId(workerId: string, status?: string) {
-    let query = db
+    const conditions = [eq(schema.applications.workerId, workerId)];
+    
+    if (status) {
+      conditions.push(eq(schema.applications.status, status as any));
+    }
+
+    return await db
       .select({
         application: schema.applications,
         job: schema.jobs,
@@ -452,18 +492,8 @@ export const applicationQueries = {
       .from(schema.applications)
       .innerJoin(schema.jobs, eq(schema.applications.jobId, schema.jobs.id))
       .innerJoin(schema.users, eq(schema.jobs.posterId, schema.users.id))
-      .where(eq(schema.applications.workerId, workerId));
-
-    if (status) {
-      query = query.where(
-        and(
-          eq(schema.applications.workerId, workerId),
-          eq(schema.applications.status, status as any)
-        )
-      );
-    }
-
-    return await query.orderBy(desc(schema.applications.appliedAt));
+      .where(and(...conditions))
+      .orderBy(desc(schema.applications.appliedAt));
   },
 
   /**
@@ -563,23 +593,34 @@ export const applicationQueries = {
    * Get application statistics
    */
   async getStats(workerId?: string) {
-    let query = db
-      .select({
-        total: count(),
-        statusCounts: sql<Record<string, number>>`
-          json_object_agg(
-            status,
-            count(*)
-          )
-        `,
-      })
-      .from(schema.applications);
-
     if (workerId) {
-      query = query.where(eq(schema.applications.workerId, workerId));
+      return await db
+        .select({
+          total: count(),
+          statusCounts: sql<Record<string, number>>`
+            json_object_agg(
+              status,
+              count(*)
+            )
+          `,
+        })
+        .from(schema.applications)
+        .where(eq(schema.applications.workerId, workerId))
+        .then(rows => rows[0]);
+    } else {
+      return await db
+        .select({
+          total: count(),
+          statusCounts: sql<Record<string, number>>`
+            json_object_agg(
+              status,
+              count(*)
+            )
+          `,
+        })
+        .from(schema.applications)
+        .then(rows => rows[0]);
     }
-
-    return await query.then(rows => rows[0]);
   },
 };
 
@@ -625,28 +666,28 @@ export const paymentQueries = {
    * Find payments by user ID (as poster or worker)
    */
   async findByUserId(userId: string, role: 'poster' | 'worker' | 'both' = 'both') {
-    let query = db
+    let whereCondition;
+    
+    if (role === 'poster') {
+      whereCondition = eq(schema.payments.posterId, userId);
+    } else if (role === 'worker') {
+      whereCondition = eq(schema.payments.workerId, userId);
+    } else {
+      whereCondition = or(
+        eq(schema.payments.posterId, userId),
+        eq(schema.payments.workerId, userId)
+      );
+    }
+
+    return await db
       .select({
         payment: schema.payments,
         job: schema.jobs,
       })
       .from(schema.payments)
-      .innerJoin(schema.jobs, eq(schema.payments.jobId, schema.jobs.id));
-
-    if (role === 'poster') {
-      query = query.where(eq(schema.payments.posterId, userId));
-    } else if (role === 'worker') {
-      query = query.where(eq(schema.payments.workerId, userId));
-    } else {
-      query = query.where(
-        or(
-          eq(schema.payments.posterId, userId),
-          eq(schema.payments.workerId, userId)
-        )
-      );
-    }
-
-    return await query.orderBy(desc(schema.payments.createdAt));
+      .innerJoin(schema.jobs, eq(schema.payments.jobId, schema.jobs.id))
+      .where(whereCondition)
+      .orderBy(desc(schema.payments.createdAt));
   },
 
   /**
@@ -676,29 +717,42 @@ export const paymentQueries = {
    * Get payment statistics
    */
   async getStats(userId?: string, role?: 'poster' | 'worker') {
-    let query = db
-      .select({
-        total: count(),
-        totalAmount: sql<number>`COALESCE(SUM(amount), 0)`,
-        avgAmount: avg(schema.payments.amount),
-        statusCounts: sql<Record<string, number>>`
-          json_object_agg(
-            status,
-            count(*)
-          )
-        `,
-      })
-      .from(schema.payments);
-
     if (userId && role) {
-      if (role === 'poster') {
-        query = query.where(eq(schema.payments.posterId, userId));
-      } else {
-        query = query.where(eq(schema.payments.workerId, userId));
-      }
+      const whereCondition = role === 'poster' 
+        ? eq(schema.payments.posterId, userId)
+        : eq(schema.payments.workerId, userId);
+        
+      return await db
+        .select({
+          total: count(),
+          totalAmount: sql<number>`COALESCE(SUM(amount), 0)`,
+          avgAmount: avg(schema.payments.amount),
+          statusCounts: sql<Record<string, number>>`
+            json_object_agg(
+              status,
+              count(*)
+            )
+          `,
+        })
+        .from(schema.payments)
+        .where(whereCondition)
+        .then(rows => rows[0]);
+    } else {
+      return await db
+        .select({
+          total: count(),
+          totalAmount: sql<number>`COALESCE(SUM(amount), 0)`,
+          avgAmount: avg(schema.payments.amount),
+          statusCounts: sql<Record<string, number>>`
+            json_object_agg(
+              status,
+              count(*)
+            )
+          `,
+        })
+        .from(schema.payments)
+        .then(rows => rows[0]);
     }
-
-    return await query.then(rows => rows[0]);
   },
 };
 
@@ -711,21 +765,17 @@ export const notificationQueries = {
    * Find notifications by user ID
    */
   async findByUserId(userId: string, unreadOnly = false) {
-    let query = db
-      .select()
-      .from(schema.notifications)
-      .where(eq(schema.notifications.userId, userId));
-
+    const conditions = [eq(schema.notifications.userId, userId)];
+    
     if (unreadOnly) {
-      query = query.where(
-        and(
-          eq(schema.notifications.userId, userId),
-          eq(schema.notifications.read, false)
-        )
-      );
+      conditions.push(eq(schema.notifications.read, false));
     }
 
-    return await query.orderBy(desc(schema.notifications.createdAt));
+    return await db
+      .select()
+      .from(schema.notifications)
+      .where(and(...conditions))
+      .orderBy(desc(schema.notifications.createdAt));
   },
 
   /**
@@ -748,7 +798,7 @@ export const notificationQueries = {
       .set({ read: true })
       .where(eq(schema.notifications.id, id));
 
-    return result.rowCount > 0;
+    return result.length > 0;
   },
 
   /**
@@ -765,7 +815,7 @@ export const notificationQueries = {
         )
       );
 
-    return result.rowCount;
+    return result.length;
   },
 
   /**
@@ -776,7 +826,7 @@ export const notificationQueries = {
       .delete(schema.notifications)
       .where(eq(schema.notifications.id, id));
 
-    return result.rowCount > 0;
+    return result.length > 0;
   },
 
   /**
@@ -801,7 +851,7 @@ export const notificationQueries = {
    */
   async cleanup(): Promise<number> {
     const result = await db.execute(sql`SELECT cleanup_old_notifications()`);
-    return result.rows[0]?.cleanup_old_notifications || 0;
+    return (result[0] as any)?.cleanup_old_notifications || 0;
   },
 };
 

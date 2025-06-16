@@ -1,52 +1,51 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
-import compression from 'compression';
-import cookieParser from 'cookie-parser';
+import { config } from './config';
+import { errorHandler } from './middleware/error';
+import { generalRateLimit, requestLogger } from './middleware/security';
 
-import {
-  config,
-  isDevelopment,
-  testDatabaseConnection,
-  testSupabaseConnection,
-  testStripeConnection,
-  closeDatabaseConnection,
-  checkDatabaseHealth
-} from './config';
-
-import {
-  corsOptions,
-  helmetOptions,
-  compressionOptions,
-  generalRateLimit,
-  errorHandler,
-  notFoundHandler,
-  requestLogger,
-  healthCheckBypass,
-  sanitizeInput,
-} from './middleware';
-
-// Import routes
+// Import route handlers
 import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
 import jobRoutes from './routes/jobs';
 import applicationRoutes from './routes/applications';
+import userRoutes from './routes/users';
 import paymentRoutes from './routes/payments';
-// import reviewRoutes from './routes/reviews';
-// import fileRoutes from './routes/files';
+import enterpriseRoutes from './routes/enterprise';
 
 const app = express();
 
-// Trust proxy for accurate IP addresses
-app.set('trust proxy', 1);
+// ============================================================================
+// MIDDLEWARE SETUP
+// ============================================================================
 
-// Health check bypass (before other middleware)
-app.use(healthCheckBypass);
+// Request logging
+app.use(requestLogger);
 
 // Security middleware
-app.use(helmet(helmetOptions));
-app.use(cors(corsOptions));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      scriptSrc: ["'self'"],
+      connectSrc: ["'self'", config.SUPABASE_URL || ""],
+    },
+  },
+}));
+
+// CORS configuration
+app.use(cors({
+  origin: [
+    'http://localhost:5173', // fixer-post dev
+    'http://localhost:5174', // fixer-work dev  
+    'http://localhost:3000', // alternative dev port
+    ...config.CORS_ORIGINS.split(',').map(origin => origin.trim()),
+  ].filter(Boolean),
+  credentials: true,
+}));
 
 // Rate limiting
 app.use(generalRateLimit);
@@ -54,150 +53,92 @@ app.use(generalRateLimit);
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cookieParser());
-
-// Compression
-app.use(compression(compressionOptions));
-
-// Logging
-if (config.ENABLE_MORGAN_LOGGING) {
-  app.use(morgan(config.LOG_FORMAT));
-}
-
-// Custom request logging
-if (isDevelopment) {
-  app.use(requestLogger);
-}
-
-// Input sanitization
-app.use(sanitizeInput);
-
-// API routes
-const apiRouter = express.Router();
 
 // Health check endpoint
-apiRouter.get('/health', async (req, res) => {
-  try {
-    const dbHealth = await checkDatabaseHealth();
-
-    res.json({
-      status: dbHealth.status === 'healthy' ? 'healthy' : 'unhealthy',
-      timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0',
-      services: {
-        database: dbHealth.status,
-        stripe: 'healthy', // TODO: Add Stripe health check
-        supabase: 'healthy', // TODO: Add Supabase health check
-      },
-      details: {
-        database: dbHealth.details,
-      },
-    });
-  } catch (error) {
-    res.status(503).json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: 'Health check failed',
-    });
-  }
-});
-
-// Mount API routes
-apiRouter.use('/auth', authRoutes);
-apiRouter.use('/users', userRoutes);
-apiRouter.use('/jobs', jobRoutes);
-apiRouter.use('/applications', applicationRoutes);
-apiRouter.use('/payments', paymentRoutes);
-// apiRouter.use('/reviews', reviewRoutes);
-// apiRouter.use('/files', fileRoutes);
-
-// Mount API router
-app.use(`/api/${config.API_VERSION}`, apiRouter);
-
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Fixer API Server',
-    version: process.env.npm_package_version || '1.0.0',
-    environment: config.NODE_ENV,
+app.get('/health', (_req, res) => {
+  res.json({ 
+    status: 'ok', 
     timestamp: new Date().toISOString(),
-    docs: isDevelopment ? `/api/${config.API_VERSION}/docs` : undefined,
+    version: process.env.npm_package_version || '1.0.0'
   });
 });
 
-// 404 handler
-app.use(notFoundHandler);
+// API documentation endpoint
+app.get('/api', (_req, res) => {
+  res.json({
+    name: 'Fixer API',
+    version: '1.0.0',
+    description: 'Job marketplace API for connecting job posters with workers',
+    endpoints: {
+      auth: '/api/auth/*', 
+      jobs: '/api/jobs/*',
+      applications: '/api/applications/*',  
+      users: '/api/users/*',
+      payments: '/api/payments/*',
+      enterprise: '/api/enterprise/*',
+    },
+    documentation: 'https://docs.fixer.app', 
+  });
+});
 
-// Error handling middleware (must be last)
+// ============================================================================
+// API ROUTES
+// ============================================================================
+
+app.use('/api/auth', authRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/applications', applicationRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/enterprise', enterpriseRoutes);
+
+// 404 handler for unknown routes
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.originalUrl} not found`,
+    availableRoutes: [
+      '/api/auth',
+      '/api/jobs', 
+      '/api/applications',
+      '/api/users',
+      '/api/payments',
+      '/api/enterprise'
+    ]
+  });
+});
+
+// Global error handler (must be last)
 app.use(errorHandler);
 
-// Graceful shutdown handler
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
+// ============================================================================
+// SERVER STARTUP
+// ============================================================================
 
-async function gracefulShutdown(signal: string) {
-  console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
-  
-  try {
-    // Close database connections
-    await closeDatabaseConnection();
-    
-    console.log('✅ Graceful shutdown completed');
+const PORT = config.PORT || 3001;
+
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Fixer API Server running on port ${PORT}`);
+  console.log(`📚 API Documentation: http://localhost:${PORT}/api`);
+  console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
+  console.log(`🔧 Environment: ${config.NODE_ENV}`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n🛑 Shutting down server gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
     process.exit(0);
-  } catch (error) {
-    console.error('❌ Error during graceful shutdown:', error);
-    process.exit(1);
-  }
-}
+  });
+});
 
-// Start server
-async function startServer() {
-  try {
-    console.log('🚀 Starting Fixer API Server...');
-    
-    // Test connections
-    console.log('🔍 Testing connections...');
-    
-    const dbConnected = await testDatabaseConnection();
-    const supabaseConnected = await testSupabaseConnection();
-    const stripeConnected = await testStripeConnection();
-    
-    if (!dbConnected || !supabaseConnected || !stripeConnected) {
-      console.error('❌ Some services are not available. Server may not function properly.');
-      if (!isDevelopment) {
-        process.exit(1);
-      }
-    }
-    
-    // Start listening
-    const server = app.listen(config.PORT, () => {
-      console.log(`✅ Server running on port ${config.PORT}`);
-      console.log(`📍 Environment: ${config.NODE_ENV}`);
-      console.log(`🌐 API Base URL: http://localhost:${config.PORT}/api/${config.API_VERSION}`);
-      
-      if (isDevelopment) {
-        console.log(`📚 Health Check: http://localhost:${config.PORT}/api/${config.API_VERSION}/health`);
-        console.log(`🔧 Debug mode: ${config.DEBUG ? 'enabled' : 'disabled'}`);
-      }
-    });
-    
-    // Handle server errors
-    server.on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${config.PORT} is already in use`);
-      } else {
-        console.error('❌ Server error:', error);
-      }
-      process.exit(1);
-    });
-    
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
-}
-
-// Start the server
-startServer();
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
 
 export default app;

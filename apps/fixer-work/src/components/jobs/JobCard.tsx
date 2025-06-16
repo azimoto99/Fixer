@@ -3,38 +3,29 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDistance, truncateText } from "@/lib/utils";
 import { MapPin, Clock, DollarSign, Tag } from "lucide-react";
 import { Link } from "react-router-dom";
+import type { Job } from '@fixer/shared';
 
-export interface JobCardProps {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  price: number;
-  priceType: 'fixed' | 'hourly';
-  locationCity: string;
-  locationState: string;
-  distance: number;
-  urgency: 'low' | 'normal' | 'high' | 'urgent';
-  createdAt: string;
+export interface JobCardProps extends Job {
+  distance?: number;
 }
 
-export function JobCard({
-  id,
-  title,
-  description,
-  category,
-  price,
-  priceType,
-  locationCity,
-  locationState,
-  distance,
-  urgency,
-  createdAt,
-}: JobCardProps) {
+export function JobCard(job: JobCardProps) {
+  const {
+    id,
+    title,
+    description,
+    category,
+    budget,
+    location,
+    distance,
+    urgency,
+    createdAt,
+  } = job;
+
   // Determine urgency badge color
   const urgencyColor = {
     low: "bg-blue-100 text-blue-800",
-    normal: "bg-green-100 text-green-800",
+    medium: "bg-green-100 text-green-800",
     high: "bg-orange-100 text-orange-800",
     urgent: "bg-red-100 text-red-800",
   }[urgency];
@@ -50,9 +41,13 @@ export function JobCard({
         </div>
         <div className="flex items-center text-sm text-muted-foreground mt-1">
           <MapPin className="h-3.5 w-3.5 mr-1" />
-          <span>{locationCity}, {locationState}</span>
-          <span className="mx-1">•</span>
-          <span>{formatDistance(distance)}</span>
+          <span>{location.city}, {location.state}</span>
+          {distance && (
+            <>
+              <span className="mx-1">•</span>
+              <span>{formatDistance(distance)}</span>
+            </>
+          )}
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -62,14 +57,19 @@ export function JobCard({
         <div className="flex flex-wrap gap-2 mt-2">
           <div className="flex items-center text-sm">
             <DollarSign className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-            <span className="font-medium">{formatCurrency(price)}</span>
+            <span className="font-medium">
+              {budget.amount ? formatCurrency(budget.amount) : 
+               budget.minAmount && budget.maxAmount ? 
+               `${formatCurrency(budget.minAmount)} - ${formatCurrency(budget.maxAmount)}` :
+               'Negotiable'}
+            </span>
             <span className="text-muted-foreground ml-1">
-              {priceType === 'hourly' ? '/hr' : ''}
+              {budget.type === 'hourly' ? '/hr' : ''}
             </span>
           </div>
           <div className="flex items-center text-sm">
             <Tag className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-            <span>{category}</span>
+            <span className="capitalize">{category.replace('_', ' ')}</span>
           </div>
         </div>
       </CardContent>

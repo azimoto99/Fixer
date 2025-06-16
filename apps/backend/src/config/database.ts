@@ -90,9 +90,9 @@ export async function checkDatabaseHealth(): Promise<{
 
     // Check connection pool status
     const poolStatus = {
-      totalConnections: client.options.max,
-      idleConnections: client.idle.length,
-      activeConnections: client.reserved.length,
+      totalConnections: client.options.max || 10,
+      idleConnections: 0, // Not available with current postgres client
+      activeConnections: 0, // Not available with current postgres client
     };
 
     return {

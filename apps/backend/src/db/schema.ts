@@ -134,6 +134,7 @@ export const jobs = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     posterId: uuid('poster_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
     workerId: uuid('worker_id').references(() => users.id, { onDelete: 'set null' }),
+    enterpriseId: uuid('enterprise_id').references(() => enterpriseClients.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     description: text('description').notNull(),
     category: text('category').notNull(),
@@ -251,6 +252,101 @@ export const notifications = pgTable(
 );
 
 // ============================================================================
+// ENTERPRISE TABLES
+// ============================================================================
+
+// Enterprise clients table
+export const enterpriseClients = pgTable(
+  'enterprise_clients',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyName: text('company_name').notNull(),
+    industry: text('industry').notNull(),
+    contactEmail: text('contact_email').notNull(),
+    contactPhone: text('contact_phone'),
+    contactUserId: uuid('contact_user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    billingAddress: jsonb('billing_address').notNull(),
+    taxId: text('tax_id'),
+    paymentTerms: integer('payment_terms').default(30), // net 30, etc.
+    accountManagerId: uuid('account_manager_id').references(() => users.id),
+    tier: text('tier').default('standard'), // standard, premium, enterprise
+    settings: jsonb('settings').default('{}'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    contactUserIdIdx: index('idx_enterprise_clients_contact_user_id').on(table.contactUserId),
+    companyNameIdx: index('idx_enterprise_clients_company_name').on(table.companyName),
+    tierIdx: index('idx_enterprise_clients_tier').on(table.tier),
+  })
+);
+
+// Job templates for recurring work
+export const jobTemplates = pgTable(
+  'job_templates',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    enterpriseId: uuid('enterprise_id').references(() => enterpriseClients.id, { onDelete: 'cascade' }).notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    jobDefaults: jsonb('job_defaults').notNull(),
+    locations: jsonb('locations').notNull().default('[]'),
+    scheduleTemplate: jsonb('schedule_template').notNull(),
+    autoPublish: boolean('auto_publish').default(true),
+    workerPoolId: uuid('worker_pool_id'), // Will reference worker_pools once created
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    enterpriseIdIdx: index('idx_job_templates_enterprise_id').on(table.enterpriseId),
+    nameIdx: index('idx_job_templates_name').on(table.name),
+  })
+);
+
+// Preferred worker pools for enterprise clients
+export const workerPools = pgTable(
+  'worker_pools',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    enterpriseId: uuid('enterprise_id').references(() => enterpriseClients.id, { onDelete: 'cascade' }).notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    criteria: jsonb('criteria').notNull(), // skills, ratings, background check status
+    workerIds: jsonb('worker_ids').default('[]'), // array of worker IDs
+    autoInvite: boolean('auto_invite').default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    enterpriseIdIdx: index('idx_worker_pools_enterprise_id').on(table.enterpriseId),
+    nameIdx: index('idx_worker_pools_name').on(table.name),
+  })
+);
+
+// Bulk job operations tracking
+export const bulkJobOperations = pgTable(
+  'bulk_job_operations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    enterpriseId: uuid('enterprise_id').references(() => enterpriseClients.id, { onDelete: 'cascade' }),
+    operationType: text('operation_type').notNull(), // 'create', 'update', 'cancel'
+    totalJobs: integer('total_jobs').notNull(),
+    successfulJobs: integer('successful_jobs').default(0),
+    failedJobs: integer('failed_jobs').default(0),
+    status: text('status').default('pending'), // pending, processing, completed, failed
+    errorDetails: jsonb('error_details').default('{}'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'cascade' }),
+    startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => ({
+    enterpriseIdIdx: index('idx_bulk_job_operations_enterprise_id').on(table.enterpriseId),
+    statusIdx: index('idx_bulk_job_operations_status').on(table.status),
+    createdByIdx: index('idx_bulk_job_operations_created_by').on(table.createdBy),
+  })
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -284,6 +380,10 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
     fields: [jobs.workerId],
     references: [users.id],
     relationName: 'worker',
+  }),
+  enterprise: one(enterpriseClients, {
+    fields: [jobs.enterpriseId],
+    references: [enterpriseClients.id],
   }),
   applications: many(applications),
   payments: many(payments),
@@ -320,6 +420,49 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
+export const enterpriseClientsRelations = relations(enterpriseClients, ({ one, many }) => ({
+  contactUser: one(users, {
+    fields: [enterpriseClients.contactUserId],
+    references: [users.id],
+  }),
+  accountManager: one(users, {
+    fields: [enterpriseClients.accountManagerId],
+    references: [users.id],
+  }),
+  jobTemplates: many(jobTemplates),
+  workerPools: many(workerPools),
+  bulkJobOperations: many(bulkJobOperations),
+}));
+
+export const jobTemplatesRelations = relations(jobTemplates, ({ one }) => ({
+  enterprise: one(enterpriseClients, {
+    fields: [jobTemplates.enterpriseId],
+    references: [enterpriseClients.id],
+  }),
+  workerPool: one(workerPools, {
+    fields: [jobTemplates.workerPoolId],
+    references: [workerPools.id],
+  }),
+}));
+
+export const workerPoolsRelations = relations(workerPools, ({ one }) => ({
+  enterprise: one(enterpriseClients, {
+    fields: [workerPools.enterpriseId],
+    references: [enterpriseClients.id],
+  }),
+}));
+
+export const bulkJobOperationsRelations = relations(bulkJobOperations, ({ one }) => ({
+  enterprise: one(enterpriseClients, {
+    fields: [bulkJobOperations.enterpriseId],
+    references: [enterpriseClients.id],
+  }),
+  createdBy: one(users, {
+    fields: [bulkJobOperations.createdBy],
     references: [users.id],
   }),
 }));
@@ -392,6 +535,59 @@ export const insertNotificationSchema = createInsertSchema(notifications, {
 
 export const selectNotificationSchema = createSelectSchema(notifications);
 
+// Enterprise schemas
+export const insertEnterpriseClientSchema = createInsertSchema(enterpriseClients, {
+  companyName: z.string().min(1).max(255),
+  industry: z.string().min(1).max(255),
+  contactEmail: z.string().email(),
+  contactPhone: z.string().regex(/^\+?[\d\s\-\(\)]+$/),
+  billingAddress: z.record(z.any()),
+  taxId: z.string().max(50).optional(),
+  paymentTerms: z.number().min(1).max(365).optional(),
+  accountManagerId: z.string().uuid().optional(),
+  tier: z.enum(['standard', 'premium', 'enterprise']).optional(),
+  settings: z.record(z.any()).optional(),
+});
+
+export const selectEnterpriseClientSchema = createSelectSchema(enterpriseClients);
+
+export const insertJobTemplateSchema = createInsertSchema(jobTemplates, {
+  enterpriseId: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  description: z.string().max(1000).optional(),
+  jobDefaults: z.record(z.any()),
+  locations: z.array(z.record(z.any())),
+  scheduleTemplate: z.record(z.any()),
+  autoPublish: z.boolean().optional(),
+  workerPoolId: z.string().uuid().optional(),
+});
+
+export const selectJobTemplateSchema = createSelectSchema(jobTemplates);
+
+export const insertWorkerPoolSchema = createInsertSchema(workerPools, {
+  enterpriseId: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  description: z.string().max(1000).optional(),
+  criteria: z.record(z.any()),
+  workerIds: z.array(z.string().uuid()).optional(),
+  autoInvite: z.boolean().optional(),
+});
+
+export const selectWorkerPoolSchema = createSelectSchema(workerPools);
+
+export const insertBulkJobOperationSchema = createInsertSchema(bulkJobOperations, {
+  enterpriseId: z.string().uuid().optional(),
+  operationType: z.enum(['create', 'update', 'cancel']),
+  totalJobs: z.number().min(1),
+  successfulJobs: z.number().optional(),
+  failedJobs: z.number().optional(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed']).optional(),
+  errorDetails: z.record(z.any()).optional(),
+  createdBy: z.string().uuid().optional(),
+});
+
+export const selectBulkJobOperationSchema = createSelectSchema(bulkJobOperations);
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -413,5 +609,17 @@ export type NewPayment = typeof payments.$inferInsert;
 
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
+
+export type EnterpriseClient = typeof enterpriseClients.$inferSelect;
+export type NewEnterpriseClient = typeof enterpriseClients.$inferInsert;
+
+export type JobTemplate = typeof jobTemplates.$inferSelect;
+export type NewJobTemplate = typeof jobTemplates.$inferInsert;
+
+export type WorkerPool = typeof workerPools.$inferSelect;
+export type NewWorkerPool = typeof workerPools.$inferInsert;
+
+export type BulkJobOperation = typeof bulkJobOperations.$inferSelect;
+export type NewBulkJobOperation = typeof bulkJobOperations.$inferInsert;
 
 

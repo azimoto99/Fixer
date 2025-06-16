@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { z } from 'zod';
 import { supabase } from '../config/supabase';
 import { db } from '../db';
 import { users } from '../db/schema';
@@ -7,8 +6,7 @@ import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/auth';
 import { 
   loginRequestSchema, 
-  registerRequestSchema,
-  updateProfileRequestSchema 
+  registerRequestSchema
 } from '@fixer/shared';
 import { eq } from 'drizzle-orm';
 
@@ -179,7 +177,7 @@ router.post('/login', validateRequest(loginRequestSchema), async (req: Request, 
  * POST /auth/logout
  * Logout user
  */
-router.post('/logout', authMiddleware, async (req: Request, res: Response) => {
+router.post('/logout', authMiddleware, async (_req: Request, res: Response) => {
   try {
     const { error } = await supabase.auth.signOut();
 

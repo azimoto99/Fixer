@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ErrorCode, HttpStatus } from '@fixer/shared';
-import { config, isDevelopment } from '../config';
+import { isDevelopment } from '../config';
 
 // Custom error class
 export class AppError extends Error {
@@ -28,7 +28,7 @@ export function errorHandler(
   error: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
   let code = ErrorCode.INTERNAL_ERROR;
@@ -37,7 +37,7 @@ export function errorHandler(
   // Handle custom AppError
   if (error instanceof AppError) {
     statusCode = error.statusCode;
-    code = error.code;
+    code = error.code as ErrorCode;
     message = error.message;
   }
   // Handle JWT errors

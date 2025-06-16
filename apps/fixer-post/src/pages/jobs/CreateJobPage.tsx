@@ -1,18 +1,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z, useNavigate } from 'zod';
+import { z } from 'zod';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { insertJobSchema } from '@fixer/shared/schemas/job';
-import { priceTypeEnum, urgencyLevelEnum } from '@fixer/shared/types/job';
+import { useCreateJob } from '@/hooks/useApi';
 
 // Create a form schema based on the job schema
 const formSchema = z.object({
@@ -49,9 +47,9 @@ const JOB_CATEGORIES = [
 ];
 
 export function CreateJobPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const createJobMutation = useCreateJob();
 
   // Initialize form with default values
   const form = useForm<z.infer<typeof formSchema>>({
@@ -76,14 +74,29 @@ export function CreateJobPage() {
 
   // Handle form submission
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-    
     try {
-      // TODO: Replace with actual API call
-      console.log('Submitting job:', values);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await createJobMutation.mutateAsync({
+        title: values.title,
+        description: values.description,
+        category: values.category,
+        location: {
+          address: values.locationAddress,
+          city: values.locationCity,
+          state: values.locationState,
+          zipCode: values.locationZip,
+          latitude: values.locationLat,
+          longitude: values.locationLng,
+        },
+        budget: {
+          type: values.priceType,
+          amount: values.price,
+          currency: 'USD',
+        },
+        urgency: values.urgency,
+        estimatedDuration: values.estimatedDurationHours?.toString() || '1',
+        requiredSkills: values.requiredSkills || [],
+        jobType: 'one_time',
+      });
       
       toast({
         title: "Job Created",
@@ -99,8 +112,6 @@ export function CreateJobPage() {
         description: "Failed to create job. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -377,8 +388,8 @@ export function CreateJobPage() {
               
               {/* Submit Button */}
               <div className="pt-6 border-t">
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? (
+                <Button type="submit" className="w-full" disabled={createJobMutation.isPending}>
+                  {createJobMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Creating Job...

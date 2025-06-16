@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
-import helmet from 'helmet';
 import cors from 'cors';
 import compression from 'compression';
 import { config, corsOrigins } from '../config';

@@ -8,49 +8,15 @@ import {
   Clock, 
   DollarSign,
   Users,
-  MoreHorizontal
+  MoreHorizontal,
+  Briefcase
 } from 'lucide-react';
+import { useMyJobs } from '@/hooks/useApi';
 
 export function JobsPage() {
-  // Mock data - in real app this would come from API
-  const jobs = [
-    {
-      id: '1',
-      title: 'Kitchen Sink Repair',
-      description: 'Need someone to fix a leaky kitchen sink. The faucet is dripping and needs replacement.',
-      category: 'Plumbing',
-      location: 'San Francisco, CA',
-      budget: { type: 'fixed', amount: 150 },
-      urgency: 'medium',
-      status: 'open',
-      applicationsCount: 3,
-      createdAt: '2024-01-15T10:00:00Z',
-    },
-    {
-      id: '2',
-      title: 'House Cleaning',
-      description: 'Deep cleaning for a 3-bedroom house. Need someone reliable and thorough.',
-      category: 'Cleaning',
-      location: 'San Francisco, CA',
-      budget: { type: 'fixed', amount: 200 },
-      urgency: 'low',
-      status: 'in_progress',
-      applicationsCount: 5,
-      createdAt: '2024-01-10T14:30:00Z',
-    },
-    {
-      id: '3',
-      title: 'Furniture Assembly',
-      description: 'Need help assembling IKEA furniture - desk, bookshelf, and chair.',
-      category: 'Assembly',
-      location: 'San Francisco, CA',
-      budget: { type: 'hourly', amount: 25 },
-      urgency: 'high',
-      status: 'completed',
-      applicationsCount: 8,
-      createdAt: '2024-01-05T09:15:00Z',
-    },
-  ];
+  // Fetch jobs using the API
+  const { data: jobsResponse, isLoading, error } = useMyJobs();
+  const jobs = jobsResponse?.data || [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -118,7 +84,24 @@ export function JobsPage() {
 
       {/* Jobs List */}
       <div className="space-y-6">
-        {jobs.map((job) => (
+        {isLoading && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading your jobs...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-medium mb-2 text-red-600">Error Loading Jobs</h3>
+            <p className="text-muted-foreground mb-4">
+              There was a problem loading your jobs. Please try again.
+            </p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        )}
+
+        {!isLoading && !error && Array.isArray(jobs) && jobs.map((job: any) => (
           <Card key={job.id} className="hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -186,7 +169,7 @@ export function JobsPage() {
         ))}
       </div>
 
-      {jobs.length === 0 && (
+      {!isLoading && !error && Array.isArray(jobs) && jobs.length === 0 && (
         <Card className="text-center py-12">
           <CardContent>
             <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

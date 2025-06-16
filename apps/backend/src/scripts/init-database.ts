@@ -134,7 +134,7 @@ async function verifySetup() {
     ];
 
     // Handle different result structures
-    const tableRows = Array.isArray(tables) ? tables : tables.rows || [];
+    const tableRows = Array.isArray(tables) ? tables : (tables as any) || [];
     const existingTables = tableRows.map((row: any) => row.table_name);
     const missingTables = expectedTables.filter(table => !existingTables.includes(table));
 
@@ -146,7 +146,7 @@ async function verifySetup() {
 
     // Test a simple query
     const testQuery = await db.execute(sql`SELECT 1 as test`);
-    const testRows = Array.isArray(testQuery) ? testQuery : testQuery.rows || [];
+    const testRows = Array.isArray(testQuery) ? testQuery : (testQuery as any) || [];
     if (testRows[0]?.test !== 1) {
       throw new Error('Database query test failed');
     }

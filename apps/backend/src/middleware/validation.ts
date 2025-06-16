@@ -180,7 +180,7 @@ export function validateFileUpload(options: {
 }
 
 // Sanitize input middleware
-export function sanitizeInput(req: Request, res: Response, next: NextFunction): void {
+export function sanitizeInput(req: Request, _res: Response, next: NextFunction): void {
   // Recursively sanitize object
   function sanitizeObject(obj: any): any {
     if (typeof obj === 'string') {
