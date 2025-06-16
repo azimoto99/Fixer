@@ -1,5 +1,17 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import Rconst isDevelopment = import.meta.env.DEV;
+const basename = isDevelopment ? '/' : '/post';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter basename={basename}>
+        <App />
+        {isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
+      </BrowserRouter>
+    </QueryClientProvider>
+  </React.StrictMode>
+); 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -38,7 +50,7 @@ const isDevelopment = import.meta.env.DEV;
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename="/post">
         <App />
         {isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
       </BrowserRouter>
