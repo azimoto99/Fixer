@@ -1,0 +1,106 @@
+/* Mapbox Styles */
+.mapboxgl-map {
+  font-family: inherit;
+}
+
+.mapboxgl-popup {
+  max-width: 200px;
+  font-family: inherit;
+}
+
+.mapboxgl-popup-content {
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.mapboxgl-popup-close-button {
+  font-size: 16px;
+  padding: 0 6px;
+}
+
+/* Custom Marker Styles */
+.job-marker {
+  cursor: pointer;
+}
+
+.marker-container {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: transform 0.2s;
+}
+
+.marker-container:hover {
+  transform: scale(1.1);
+}
+
+.marker-price {
+  font-size: 12px;
+}
+
+/* User Location Marker */
+.user-marker-container {
+  position: relative;
+}
+
+.user-marker-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4A90E2;
+  border: 3px solid white;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+.user-marker-pulse {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(74, 144, 226, 0.2);
+  border: 2px solid rgba(74, 144, 226, 0.5);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Job Detail Map Marker */
+.job-marker .marker-pin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  background: #ef4444;
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 50%;
+  margin: -15px 0 0 -15px;
+}
+
+.job-marker .marker-pin::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  margin: 5px 0 0 5px;
+  background: white;
+  position: absolute;
+  border-radius: 50%;
+}
