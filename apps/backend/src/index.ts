@@ -92,11 +92,11 @@ app.use('/api/users', userRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/enterprise', enterpriseRoutes);
 
-// 404 handler for unknown routes
-app.use('*', (req, res) => {
+// 404 handler for unknown API routes only
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     error: 'Not Found',
-    message: `Route ${req.originalUrl} not found`,
+    message: `API route ${req.originalUrl} not found`,
     availableRoutes: [
       '/api/auth',
       '/api/jobs', 
