@@ -5,7 +5,7 @@ import { jobs, users, applications, workerProfiles } from '../db/schema';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/auth';
 import { jobCreateRequestSchema, jobUpdateRequestSchema } from '@fixer/shared';
-import { eq, and, desc, asc, sql, or, ilike, inArray } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, or, ilike } from 'drizzle-orm';
 
 const router = Router();
 

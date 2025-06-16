@@ -5,7 +5,7 @@ import { users, workerProfiles } from '../db/schema';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/auth';
 import { updateProfileRequestSchema } from '@fixer/shared';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 const router = Router();
 

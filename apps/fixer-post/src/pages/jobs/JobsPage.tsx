@@ -12,11 +12,11 @@ import {
   Briefcase
 } from 'lucide-react';
 import { useMyJobs } from '@/hooks/useApi';
+import { Job } from '@fixer/shared/types'; 
 
 export function JobsPage() {
-  // Fetch jobs using the API
-  const { data: jobsResponse, isLoading, error } = useMyJobs();
-  const jobs = jobsResponse?.data || [];
+  const { data: jobsResponse, isLoading, isError, error } = useMyJobs();
+  const jobs: Job[] = jobsResponse?.data || [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -49,6 +49,7 @@ export function JobsPage() {
   };
 
   const formatBudget = (budget: any) => {
+    if (!budget) return 'N/A';
     if (budget.type === 'fixed') {
       return `$${budget.amount}`;
     } else if (budget.type === 'hourly') {
@@ -91,17 +92,17 @@ export function JobsPage() {
           </div>
         )}
 
-        {error && (
+        {isError && (
           <div className="text-center py-12">
             <h3 className="text-lg font-medium mb-2 text-red-600">Error Loading Jobs</h3>
             <p className="text-muted-foreground mb-4">
-              There was a problem loading your jobs. Please try again.
+              {error instanceof Error ? error.message : 'There was a problem loading your jobs. Please try again.'}
             </p>
             <Button onClick={() => window.location.reload()}>Retry</Button>
           </div>
         )}
 
-        {!isLoading && !error && Array.isArray(jobs) && jobs.map((job: any) => (
+        {!isLoading && !isError && Array.isArray(jobs) && jobs.map((job: Job) => ( 
           <Card key={job.id} className="hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -136,7 +137,7 @@ export function JobsPage() {
                 <div className="flex items-center gap-6 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
-                    {job.location}
+                    {job.location?.address || 'Remote'} 
                   </div>
                   <div className="flex items-center gap-1">
                     <DollarSign className="h-4 w-4" />
@@ -144,11 +145,11 @@ export function JobsPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
-                    {job.applicationsCount} applications
+                    {job.applicationsCount ?? 0} applications 
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {new Date(job.createdAt).toLocaleDateString()}
+                    {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A'}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -158,7 +159,7 @@ export function JobsPage() {
                   {job.status === 'open' && (
                     <Button size="sm" asChild>
                       <Link to={`/jobs/${job.id}/applications`}>
-                        View Applications ({job.applicationsCount})
+                        View Applications ({job.applicationsCount ?? 0})
                       </Link>
                     </Button>
                   )}
@@ -169,7 +170,7 @@ export function JobsPage() {
         ))}
       </div>
 
-      {!isLoading && !error && Array.isArray(jobs) && jobs.length === 0 && (
+      {!isLoading && !isError && Array.isArray(jobs) && jobs.length === 0 && (
         <Card className="text-center py-12">
           <CardContent>
             <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

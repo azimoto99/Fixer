@@ -85,36 +85,35 @@ export interface WorkerPoolCriteria {
 export const enterpriseApi = {
   // Analytics
   async getMetrics(period: string = '30d'): Promise<EnterpriseMetrics> {
-    const response = await api.get(`/enterprise/analytics/overview?period=${period}`);
-    return response.data.metrics;
+    const response = await api.get<{ metrics: EnterpriseMetrics }>(`/enterprise/analytics/overview`, { params: { period } });
+    return response.data!.metrics; // Use non-null assertion if confident data is present
   },
 
-  async getJobAnalytics(period: string = '30d') {
-    const response = await api.get(`/enterprise/analytics/jobs?period=${period}`);
+  async getJobAnalytics(period: string = '30d'): Promise<any> { // Define specific type if known
+    const response = await api.get<any>(`/enterprise/analytics/jobs`, { params: { period } });
     return response.data;
   },
 
-  async getWorkerAnalytics(poolId?: string) {
-    const url = poolId 
-      ? `/enterprise/analytics/workers?poolId=${poolId}`
-      : '/enterprise/analytics/workers';
-    const response = await api.get(url);
+  async getWorkerAnalytics(poolId?: string): Promise<any> { // Define specific type if known
+    const url = '/enterprise/analytics/workers';
+    const params = poolId ? { poolId } : {};
+    const response = await api.get<any>(url, { params });
     return response.data;
   },
 
-  async getCostAnalytics(breakdown: string = 'location') {
-    const response = await api.get(`/enterprise/analytics/costs?breakdown=${breakdown}`);
+  async getCostAnalytics(breakdown: string = 'location'): Promise<any> { // Define specific type if known
+    const response = await api.get<any>(`/enterprise/analytics/costs`, { params: { breakdown } });
     return response.data;
   },
 
   // Bulk Job Operations
   async createBulkJobs(request: BulkJobRequest): Promise<BulkJobResponse> {
-    const response = await api.post('/enterprise/jobs/bulk', request);
-    return response.data;
+    const response = await api.post<BulkJobResponse>('/enterprise/jobs/bulk', request);
+    return response.data!;
   },
 
-  async updateBulkJobs(jobIds: string[], updates: any) {
-    const response = await api.put('/enterprise/jobs/bulk', {
+  async updateBulkJobs(jobIds: string[], updates: any): Promise<any> { // Define specific type if known
+    const response = await api.put<any>('/enterprise/jobs/bulk', {
       jobIds,
       updates
     });
@@ -122,29 +121,29 @@ export const enterpriseApi = {
   },
 
   async getBulkOperations(): Promise<BulkJobOperation[]> {
-    const response = await api.get('/enterprise/bulk-operations');
-    return response.data.operations;
+    const response = await api.get<{ operations: BulkJobOperation[] }>('/enterprise/bulk-operations');
+    return response.data!.operations;
   },
 
   async getBulkOperation(operationId: string): Promise<BulkJobOperation> {
-    const response = await api.get(`/enterprise/bulk-operations/${operationId}`);
-    return response.data.operation;
+    const response = await api.get<{ operation: BulkJobOperation }>(`/enterprise/bulk-operations/${operationId}`);
+    return response.data!.operation;
   },
 
   // Job Templates
   async getTemplates(): Promise<JobTemplate[]> {
-    const response = await api.get('/enterprise/templates');
-    return response.data.templates;
+    const response = await api.get<{ templates: JobTemplate[] }>('/enterprise/templates');
+    return response.data!.templates;
   },
 
   async createTemplate(template: Partial<JobTemplate>): Promise<JobTemplate> {
-    const response = await api.post('/enterprise/templates', template);
-    return response.data.template;
+    const response = await api.post<{ template: JobTemplate }>('/enterprise/templates', template);
+    return response.data!.template;
   },
 
   async updateTemplate(id: string, template: Partial<JobTemplate>): Promise<JobTemplate> {
-    const response = await api.put(`/enterprise/templates/${id}`, template);
-    return response.data.template;
+    const response = await api.put<{ template: JobTemplate }>(`/enterprise/templates/${id}`, template);
+    return response.data!.template;
   },
 
   async deleteTemplate(id: string): Promise<void> {
@@ -156,8 +155,8 @@ export const enterpriseApi = {
     dateRange: { start: string; end: string },
     locations?: string[],
     overrides?: any
-  ) {
-    const response = await api.post(`/enterprise/templates/${templateId}/generate`, {
+  ): Promise<any> { // Define specific type if known
+    const response = await api.post<any>(`/enterprise/templates/${templateId}/generate`, {
       dateRange,
       locations,
       overrides
@@ -167,8 +166,8 @@ export const enterpriseApi = {
 
   // Worker Pools
   async getWorkerPools(): Promise<WorkerPool[]> {
-    const response = await api.get('/enterprise/worker-pools');
-    return response.data.workerPools;
+    const response = await api.get<{ workerPools: WorkerPool[] }>('/enterprise/worker-pools');
+    return response.data!.workerPools;
   },
 
   async createWorkerPool(pool: {
@@ -178,13 +177,13 @@ export const enterpriseApi = {
     workerIds?: string[];
     autoInvite?: boolean;
   }): Promise<WorkerPool> {
-    const response = await api.post('/enterprise/worker-pools', pool);
-    return response.data.workerPool;
+    const response = await api.post<{ workerPool: WorkerPool }>('/enterprise/worker-pools', pool);
+    return response.data!.workerPool;
   },
 
   async updateWorkerPool(id: string, pool: Partial<WorkerPool>): Promise<WorkerPool> {
-    const response = await api.put(`/enterprise/worker-pools/${id}`, pool);
-    return response.data.workerPool;
+    const response = await api.put<{ workerPool: WorkerPool }>(`/enterprise/worker-pools/${id}`, pool);
+    return response.data!.workerPool;
   },
 
   async deleteWorkerPool(id: string): Promise<void> {
@@ -196,9 +195,8 @@ export const enterpriseApi = {
   },
 
   async removeWorkersFromPool(poolId: string, workerIds: string[]): Promise<void> {
-    await api.delete(`/enterprise/worker-pools/${poolId}/workers`, { 
-      data: { workerIds } 
-    });
+    // For DELETE with body, ensure api.delete handles it or use api.request directly if needed
+    await api.delete(`/enterprise/worker-pools/${poolId}/workers`, { workerIds });
   },
 
   // CSV Import/Export
@@ -206,71 +204,70 @@ export const enterpriseApi = {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await api.post('/enterprise/jobs/import-csv', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    // Use the generic post method from api client for multipart/form-data
+    // The api.post method now handles FormData correctly.
+    const response = await api.post<BulkJobResponse>('/enterprise/jobs/import-csv', formData);
+    return response.data!;
   },
 
   async downloadTemplate(): Promise<Blob> {
-    const response = await api.get('/enterprise/jobs/csv-template', {
+    // Use the generic get method from api client for blob response
+    const blob = await api.get('/enterprise/jobs/csv-template', {
       responseType: 'blob',
     });
-    return response.data;
+    return blob;
   },
 
   async exportJobs(filters?: any): Promise<Blob> {
-    const response = await api.get('/enterprise/jobs/export', {
+    const blob = await api.get('/enterprise/jobs/export', {
       params: filters,
       responseType: 'blob',
     });
-    return response.data;
+    return blob;
   },
 
   // Enterprise Client Management
   async getEnterpriseProfile(): Promise<EnterpriseClient> {
-    const response = await api.get('/enterprise/profile');
-    return response.data.enterprise;
+    const response = await api.get<{ enterprise: EnterpriseClient }>('/enterprise/profile');
+    return response.data!.enterprise;
   },
 
   async updateEnterpriseProfile(profile: Partial<EnterpriseClient>): Promise<EnterpriseClient> {
-    const response = await api.put('/enterprise/profile', profile);
-    return response.data.enterprise;
+    const response = await api.put<{ enterprise: EnterpriseClient }>('/enterprise/profile', profile);
+    return response.data!.enterprise;
   },
 
   // Compliance & Government Features
-  async getComplianceReports(type?: string) {
-    const response = await api.get('/enterprise/compliance/reports', {
+  async getComplianceReports(type?: string): Promise<any> { // Define specific type if known
+    const response = await api.get<any>('/enterprise/compliance/reports', {
       params: { type }
     });
     return response.data;
   },
 
-  async generateComplianceReport(config: any) {
-    const response = await api.post('/enterprise/compliance/generate', config);
+  async generateComplianceReport(config: any): Promise<any> { // Define specific type if known
+    const response = await api.post<any>('/enterprise/compliance/generate', config);
     return response.data;
   },
 
-  async getPrevailingWageData(location: string, jobType: string) {
-    const response = await api.get('/enterprise/compliance/prevailing-wage', {
+  async getPrevailingWageData(location: string, jobType: string): Promise<any> { // Define specific type if known
+    const response = await api.get<any>('/enterprise/compliance/prevailing-wage', {
       params: { location, jobType }
     });
     return response.data;
   },
 
   // Background Check Integration
-  async initiateBackgroundCheck(workerId: string, level: string) {
-    const response = await api.post('/enterprise/background-checks', {
+  async initiateBackgroundCheck(workerId: string, level: string): Promise<any> { // Define specific type if known
+    const response = await api.post<any>('/enterprise/background-checks', {
       workerId,
       level
     });
     return response.data;
   },
 
-  async getBackgroundCheckStatus(checkId: string) {
-    const response = await api.get(`/enterprise/background-checks/${checkId}`);
+  async getBackgroundCheckStatus(checkId: string): Promise<any> { // Define specific type if known
+    const response = await api.get<any>(`/enterprise/background-checks/${checkId}`);
     return response.data;
   }
 };

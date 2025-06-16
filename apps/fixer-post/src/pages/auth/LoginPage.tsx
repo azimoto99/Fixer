@@ -2,9 +2,17 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { loginRequestSchema, type LoginRequest } from '@fixer/shared';
+import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+
+// Temporary schema definition until shared package exports are working
+const loginRequestSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+type LoginRequest = z.infer<typeof loginRequestSchema>;
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

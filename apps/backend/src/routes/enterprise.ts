@@ -606,7 +606,7 @@ router.get('/bulk-operations', async (req: Request, res: Response) => {
     const operations = await db.select()
       .from(bulkJobOperations)
       .where(eq(bulkJobOperations.enterpriseId, enterprise.id))
-      .orderBy(desc(bulkJobOperations.createdAt))
+      .orderBy(desc(bulkJobOperations.startedAt))
       .limit(20);
 
     res.json({

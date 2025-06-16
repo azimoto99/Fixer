@@ -12,6 +12,8 @@ import { JobsPage } from '@/pages/jobs/JobsPage';
 import { CreateJobPage } from '@/pages/jobs/CreateJobPage';
 import { JobDetailPage } from '@/pages/jobs/JobDetailPage';
 import { ProfilePage } from '@/pages/profile/ProfilePage';
+import { PaymentsPage } from '@/pages/payments/PaymentsPage';
+import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
 import EnterpriseDashboard from '@/pages/EnterpriseDashboard';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
@@ -57,6 +59,18 @@ function App() {
             <Route path="profile" element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="payments" element={
+              <ProtectedRoute>
+                <PaymentsPage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="notifications" element={
+              <ProtectedRoute>
+                <NotificationsPage />
               </ProtectedRoute>
             } />
             

@@ -126,8 +126,8 @@ export function useLogin() {
   return useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       api.login(email, password),
-    onSuccess: (data) => {
-      if (data.data?.session?.access_token) {
+    onSuccess: (data: any) => {
+      if (data?.data?.session?.access_token) {
         api.setToken(data.data.session.access_token);
       }
     },
@@ -137,8 +137,8 @@ export function useLogin() {
 export function useRegister() {
   return useMutation({
     mutationFn: api.register.bind(api),
-    onSuccess: (data) => {
-      if (data.data?.session?.access_token) {
+    onSuccess: (data: any) => {
+      if (data?.data?.session?.access_token) {
         api.setToken(data.data.session.access_token);
       }
     },

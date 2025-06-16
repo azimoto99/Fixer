@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { db } from '../db';
-import { payments, jobs, users, workerProfiles } from '../db/schema';
+import { payments, jobs, workerProfiles } from '../db/schema';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/auth';
 import { createPaymentIntentRequestSchema, confirmPaymentRequestSchema } from '@fixer/shared';

@@ -172,7 +172,7 @@ export function JobLocationMap({ jobLocation, userLocation }: JobLocationMapProp
         </div>
       )}
       
-      <style jsx>{`
+      <style>{`
         .job-marker {
           width: 30px;
           height: 40px;

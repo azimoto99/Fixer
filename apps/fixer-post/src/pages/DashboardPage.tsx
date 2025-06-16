@@ -8,8 +8,8 @@ import {
   Users, 
   DollarSign, 
   Clock,
-  TrendingUp,
-  CheckCircle
+  CheckCircle,
+  Bell
 } from 'lucide-react';
 
 export function DashboardPage() {
@@ -170,6 +170,13 @@ export function DashboardPage() {
                 <Link to="/payments">
                   <DollarSign className="mr-2 h-4 w-4" />
                   Payment History
+                </Link>
+              </Button>
+
+              <Button asChild className="w-full justify-start" variant="outline">
+                <Link to="/notifications">
+                  <Bell className="mr-2 h-4 w-4" />
+                  Notifications
                 </Link>
               </Button>
 

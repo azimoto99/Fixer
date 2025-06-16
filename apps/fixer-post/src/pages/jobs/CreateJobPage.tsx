@@ -116,7 +116,7 @@ export function CreateJobPage() {
   }
 
   // TODO: Implement geocoding for address to lat/lng conversion
-  const handleAddressChange = (address: string) => {
+  const handleAddressChange = (_address: string) => {
     // For now, set dummy coordinates
     form.setValue('locationLat', 37.7749);
     form.setValue('locationLng', -122.4194);

@@ -1,6 +1,56 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
+interface AuthResponse {
+  session?: {
+    access_token: string;
+  };
+  user?: any;
+}
+
+interface ApiResponseWrapper<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+// Generic hook to access specific API methods (avoid exposing private properties)
+export function useApi() {
+  return {
+    // Generic HTTP methods
+    get: api.get.bind(api),
+    post: api.post.bind(api),
+    put: api.put.bind(api),
+    delete: api.delete.bind(api),
+    // Auth methods
+    login: api.login.bind(api),
+    register: api.register.bind(api),
+    logout: api.logout.bind(api),
+    // Job methods
+    getMyJobs: api.getMyJobs.bind(api),
+    getJob: api.getJob.bind(api),
+    createJob: api.createJob.bind(api),
+    updateJob: api.updateJob.bind(api),
+    deleteJob: api.deleteJob.bind(api),
+    // Application methods
+    getJobApplications: api.getJobApplications.bind(api),
+    acceptApplication: api.acceptApplication.bind(api),
+    rejectApplication: api.rejectApplication.bind(api),
+    // Profile methods
+    getUserProfile: api.getUserProfile.bind(api),
+    updateUserProfile: api.updateUserProfile.bind(api),
+    // Payment methods
+    createPaymentIntent: api.createPaymentIntent.bind(api),
+    confirmPayment: api.confirmPayment.bind(api),
+    // Token methods
+    setToken: api.setToken.bind(api),
+    clearToken: api.clearToken.bind(api),
+  };
+}
+
 // Jobs hooks for posters
 export function useMyJobs(params: {
   page?: number;
@@ -131,10 +181,9 @@ export function useConfirmPayment() {
 
 // Auth hooks
 export function useLogin() {
-  return useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      api.login(email, password),
-    onSuccess: (data) => {
+  return useMutation<ApiResponseWrapper<AuthResponse>, unknown, { email: string; password: string }>({
+    mutationFn: ({ email, password }) => api.login(email, password),
+    onSuccess: (data: any) => {
       if (data.data?.session?.access_token) {
         api.setToken(data.data.session.access_token);
       }
@@ -143,9 +192,9 @@ export function useLogin() {
 }
 
 export function useRegister() {
-  return useMutation({
+  return useMutation<ApiResponseWrapper<AuthResponse>, unknown, any>({
     mutationFn: api.register.bind(api),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data.data?.session?.access_token) {
         api.setToken(data.data.session.access_token);
       }

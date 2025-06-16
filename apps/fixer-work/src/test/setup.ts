@@ -30,7 +30,7 @@ jest.mock('mapbox-gl', () => ({
 // Mock environment variables
 window.ENV = {
   VITE_MAPBOX_ACCESS_TOKEN: 'pk.test',
-  VITE_API_BASE_URL: 'http://localhost:3001/api/v1',
+  VITE_API_URL: 'http://localhost:3001/api/v1',
   VITE_SUPABASE_URL: 'https://test.supabase.co',
   VITE_SUPABASE_ANON_KEY: 'test-key',
 };

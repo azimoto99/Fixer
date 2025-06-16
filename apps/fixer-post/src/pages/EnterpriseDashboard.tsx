@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,94 +24,76 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Upload, Plus, BarChart3, Users, Calendar, MapPin } from 'lucide-react';
-import { enterpriseApi } from '@/lib/enterpriseApi';
+import { enterpriseApi, BulkJobRequest, csvHelpers, EnterpriseMetrics } from '@/lib/enterpriseApi'; // Added EnterpriseMetrics
+import type { BulkJobOperation, JobTemplate, WorkerPool } from '@fixer/shared';
 
 export default function EnterpriseDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedPeriod] = useState('30d');
   
-  // Fetch enterprise metrics
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
+  const { data: metrics, isLoading: metricsLoading } = useQuery<EnterpriseMetrics>({
     queryKey: ['enterprise-metrics', selectedPeriod],
     queryFn: () => enterpriseApi.getMetrics(selectedPeriod),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, 
   });
 
-  // Fetch job templates
-  const { data: templates, isLoading: templatesLoading } = useQuery({
+  const { data: templates, isLoading: templatesLoading } = useQuery<JobTemplate[]>({
     queryKey: ['enterprise-templates'],
     queryFn: () => enterpriseApi.getTemplates(),
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000, 
   });
 
-  // Fetch worker pools
-  const { data: workerPools, isLoading: poolsLoading } = useQuery({
+  const { data: workerPools, isLoading: poolsLoading } = useQuery<WorkerPool[]>({
     queryKey: ['enterprise-worker-pools'],
     queryFn: () => enterpriseApi.getWorkerPools(),
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000, 
   });
 
-  // Fetch bulk operations
-  const { data: bulkOperations, isLoading: operationsLoading } = useQuery({
+  const { data: bulkOperations, isLoading: operationsLoading } = useQuery<BulkJobOperation[]>({
     queryKey: ['enterprise-bulk-operations'],
     queryFn: () => enterpriseApi.getBulkOperations(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, 
+    refetchInterval: 15000, // Refetch operations periodically for status updates
   });
-
-  // Mutation for creating bulk jobs (TODO: connect to UI)
-  // const createBulkJobsMutation = useMutation({
-  //   mutationFn: (data: any) => enterpriseApi.createBulkJobs(data),
-  //   onSuccess: (response) => {
-  //     toast({
-  //       title: "Bulk Jobs Created",
-  //       description: `Successfully created ${response.created} jobs.`,
-  //     });
-  //     queryClient.invalidateQueries({ queryKey: ['enterprise-metrics'] });
-  //     queryClient.invalidateQueries({ queryKey: ['enterprise-bulk-operations'] });
-  //   },
-  //   onError: (error: any) => {
-  //     toast({
-  //       title: "Error",
-  //       description: error.message || "Failed to create bulk jobs.",
-  //       variant: "destructive",
-  //     });
-  //   },
-  // });
 
   const [activeTab, setActiveTab] = useState('overview');
   const [bulkJobsFile, setBulkJobsFile] = useState<File | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'csv' | 'form' | 'template'>('csv');
 
-  const uploadBulkJobs = useMutation({
-    mutationFn: async (file: File) => {
-      // Parse CSV file and create bulk job request
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      // For now, we'll create a simple bulk job request
-      // In a real implementation, you'd parse the CSV and create proper job data
-      const bulkJobRequest = {
-        jobs: [], // This would be populated from CSV parsing
-        publishImmediately: true,
-        notifyWorkers: true
-      };
-      
-      return await enterpriseApi.createBulkJobs(bulkJobRequest);
+  const uploadBulkJobsMutation = useMutation({
+    mutationFn: async (data: { file?: File; jobs?: BulkJobRequest }) => {
+      if (data.file) {
+        const validation = await csvHelpers.validateCSV(data.file);
+        if (!validation.valid) {
+          toast({
+            title: 'Invalid CSV File',
+            description: validation.errors.join(', '),
+            variant: 'destructive',
+          });
+          throw new Error('Invalid CSV file');
+        }
+        return enterpriseApi.uploadCSV(data.file);
+      } else if (data.jobs) {
+        return enterpriseApi.createBulkJobs(data.jobs);
+      } else {
+        throw new Error('No data provided for bulk job creation.');
+      }
     },
     onSuccess: (data) => {
       toast({
-        title: 'Bulk jobs created successfully',
-        description: `Created ${data.created} jobs${data.failed > 0 ? `, ${data.failed} failed` : ''}`,
+        title: 'Bulk operation processing', // Changed title to reflect async nature
+        description: `Operation ID: ${data.operationId}. Check the operations tab for status.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['enterprise-metrics'] });
       queryClient.invalidateQueries({ queryKey: ['enterprise-bulk-operations'] });
+      // Optionally invalidate metrics if they are expected to change immediately
+      // queryClient.invalidateQueries({ queryKey: ['enterprise-metrics'] }); 
       setBulkJobsFile(null);
     },
     onError: (error: any) => {
       toast({
-        title: 'Upload failed',
-        description: error?.message || 'Failed to process bulk job upload',
+        title: 'Operation failed',
+        description: error?.message || 'Failed to process bulk job operation',
         variant: 'destructive',
       });
     },
@@ -119,24 +101,34 @@ export default function EnterpriseDashboard() {
 
   const handleFileUpload = () => {
     if (bulkJobsFile) {
-      uploadBulkJobs.mutate(bulkJobsFile);
+      uploadBulkJobsMutation.mutate({ file: bulkJobsFile });
     }
   };
 
-  const downloadTemplate = () => {
-    const csvContent = [
-      'title,description,category,address,city,state,zipCode,latitude,longitude,payAmount,payType,estimatedDuration,requirements,urgency,workerCount,backgroundCheckRequired,equipmentProvided,scheduledStart,clientNotes',
-      'Office Cleaning,Daily office cleaning and maintenance,cleaning,"123 Main St, Suite 100",Springfield,IL,62701,39.7817,-89.6501,25.00,hourly,2,"vacuuming;dusting;trash removal",medium,1,false,true,2024-01-15T09:00:00Z,Please use eco-friendly products',
-      'Lawn Maintenance,Weekly lawn mowing and edging,landscaping,"456 Oak Ave",Springfield,IL,62704,39.7990,-89.6540,150.00,fixed,3,"mowing;edging;leaf removal",low,2,false,true,2024-01-16T08:00:00Z,Equipment storage available in garage'
-    ].join('\n');
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setBulkJobsFile(event.target.files[0]);
+    }
+  };
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'bulk-jobs-template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const downloadCsvTemplate = () => {
+    csvHelpers.downloadTemplate();
+  };
+
+  // Helper to determine badge variant based on operation status
+  const getOperationStatusBadgeVariant = (status: BulkJobOperation['status']) => {
+    switch (status) {
+      case 'completed':
+        return 'default';
+      case 'processing':
+        return 'outline';
+      case 'pending':
+        return 'secondary';
+      case 'failed':
+        return 'destructive';
+      default:
+        return 'secondary';
+    }
   };
 
   return (
@@ -171,8 +163,8 @@ export default function EnterpriseDashboard() {
                 <Tabs value={uploadMethod} onValueChange={(value: string) => setUploadMethod(value as 'csv' | 'form' | 'template')}>
                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="csv">CSV Upload</TabsTrigger>
-                    <TabsTrigger value="template">Template</TabsTrigger>
-                    <TabsTrigger value="form">Manual Form</TabsTrigger>
+                    <TabsTrigger value="template" disabled>Template</TabsTrigger>
+                    <TabsTrigger value="form" disabled>Manual Form</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="csv" className="space-y-4">
@@ -182,22 +174,22 @@ export default function EnterpriseDashboard() {
                         id="csv-file"
                         type="file"
                         accept=".csv"
-                        onChange={(e) => setBulkJobsFile(e.target.files?.[0] || null)}
+                        onChange={handleFileChange}
                       />
                       <p className="text-sm text-muted-foreground">
                         Upload a CSV file with job details. 
-                        <Button variant="link" size="sm" onClick={downloadTemplate} className="p-0 h-auto">
+                        <Button variant="link" size="sm" onClick={downloadCsvTemplate} className="p-0 h-auto">
                           Download template
                         </Button>
                       </p>
                     </div>
                     <Button 
                       onClick={handleFileUpload} 
-                      disabled={!bulkJobsFile || uploadBulkJobs.isPending}
+                      disabled={!bulkJobsFile || uploadBulkJobsMutation.isPending}
                       className="w-full"
                     >
                       <Upload className="mr-2 h-4 w-4" />
-                      {uploadBulkJobs.isPending ? 'Uploading...' : 'Upload Jobs'}
+                      {uploadBulkJobsMutation.isPending ? 'Uploading...' : 'Upload Jobs'}
                     </Button>
                   </TabsContent>
                   
@@ -258,7 +250,7 @@ export default function EnterpriseDashboard() {
                   {metricsLoading ? '...' : `${metrics?.fillRate || 0}%`}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  +2% from last month
+                  {/* Placeholder for comparison data */}
                 </p>
               </CardContent>
             </Card>
@@ -273,7 +265,7 @@ export default function EnterpriseDashboard() {
                   {metricsLoading ? '...' : `${metrics?.avgTimeToFill || 0}h`}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  -0.8h from last month
+                  {/* Placeholder for comparison data */}
                 </p>
               </CardContent>
             </Card>
@@ -288,7 +280,7 @@ export default function EnterpriseDashboard() {
                   {metricsLoading ? '...' : `$${(metrics?.totalPayout || 0).toLocaleString()}`}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  +12% from last month
+                  {/* Placeholder for comparison data */}
                 </p>
               </CardContent>
             </Card>
@@ -307,9 +299,9 @@ export default function EnterpriseDashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Type</TableHead>
-                    <TableHead>Jobs</TableHead>
+                    <TableHead>Jobs (Processed/Total)</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>Date Started</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -320,11 +312,11 @@ export default function EnterpriseDashboard() {
                       </TableCell>
                     </TableRow>
                   ) : bulkOperations && bulkOperations.length > 0 ? (
-                    bulkOperations.map((operation) => (
+                    bulkOperations.slice(0, 5).map((operation: BulkJobOperation) => ( // Displaying latest 5
                       <TableRow key={operation.id}>
                         <TableCell className="capitalize">{operation.type}</TableCell>
                         <TableCell>
-                          {operation.successfulJobs || 0}/{operation.totalJobs || 0}
+                          {operation.processedJobs || 0}/{operation.totalJobs || 0}
                           {(operation.failedJobs || 0) > 0 && (
                             <span className="text-red-500 ml-1">
                               ({operation.failedJobs} failed)
@@ -332,15 +324,12 @@ export default function EnterpriseDashboard() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={
-                            operation.status === 'completed' ? 'default' :
-                            operation.status === 'partial' ? 'secondary' : 'destructive'
-                          }>
+                          <Badge variant={getOperationStatusBadgeVariant(operation.status)}>
                             {operation.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {new Date(operation.createdAt).toLocaleDateString()}
+                          {new Date(operation.startedAt).toLocaleDateString()}
                         </TableCell>
                       </TableRow>
                     ))
@@ -365,7 +354,7 @@ export default function EnterpriseDashboard() {
                 Create and manage reusable job templates
               </p>
             </div>
-            <Button>
+            <Button disabled> {/* TODO: Implement New Template Dialog */}
               <Plus className="mr-2 h-4 w-4" />
               New Template
             </Button>
@@ -377,7 +366,7 @@ export default function EnterpriseDashboard() {
                 Loading templates...
               </div>
             ) : templates && templates.length > 0 ? (
-              templates?.map((template: any) => (
+              templates?.map((template: JobTemplate) => (
                 <Card key={template.id}>
                   <CardHeader>
                     <CardTitle className="text-lg">{template.name}</CardTitle>
@@ -386,21 +375,21 @@ export default function EnterpriseDashboard() {
                   <CardContent className="space-y-2">
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />
-                      <span>{template.locations || 0} locations</span>
+                      <span>Category: {template.category}</span>
                     </div>
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      <span>Last used: {template.lastUsed ? new Date(template.lastUsed).toLocaleDateString() : 'Never'}</span>
+                      <span>Last updated: {new Date(template.updatedAt).toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                       <Building2 className="h-4 w-4" />
-                      <span>{template.totalJobs || 0} jobs created</span>
+                      <span>{template.isActive ? 'Active' : 'Inactive'}</span>
                     </div>
                     <div className="flex space-x-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button variant="outline" size="sm" className="flex-1" disabled> {/* TODO: Implement Edit */}
                         Edit
                       </Button>
-                      <Button size="sm" className="flex-1">
+                      <Button size="sm" className="flex-1" disabled> {/* TODO: Implement Use Template */}
                         Use Template
                       </Button>
                     </div>
@@ -424,7 +413,7 @@ export default function EnterpriseDashboard() {
                 Manage preferred worker groups for automatic job assignment
               </p>
             </div>
-            <Button>
+            <Button disabled> {/* TODO: Implement New Pool Dialog */}
               <Plus className="mr-2 h-4 w-4" />
               New Pool
             </Button>
@@ -436,7 +425,7 @@ export default function EnterpriseDashboard() {
                 Loading worker pools...
               </div>
             ) : workerPools && workerPools.length > 0 ? (
-              workerPools.map((pool) => (
+              workerPools.map((pool: WorkerPool) => (
                 <Card key={pool.id}>
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -444,25 +433,25 @@ export default function EnterpriseDashboard() {
                         <CardTitle className="text-lg">{pool.name}</CardTitle>
                         <CardDescription>{pool.description || 'No description'}</CardDescription>
                       </div>
-                      <Badge variant={pool.autoInvite ? 'default' : 'secondary'}>
-                        {pool.autoInvite ? 'Auto-invite' : 'Manual'}
+                      <Badge variant={pool.isActive ? 'default' : 'secondary'}>
+                        {pool.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="flex items-center space-x-2 text-sm">
                       <Users className="h-4 w-4" />
-                      <span>{pool.workerCount || 0} workers</span>
+                      <span>{pool.workerIds.length || 0} workers</span>
                     </div>
                     <div className="flex items-center space-x-2 text-sm">
                       <BarChart3 className="h-4 w-4" />
-                      <span>Avg rating: {pool.avgRating || 0}/5</span>
+                      <span>Skills: {pool.skills.join(', ') || 'Any'}</span>
                     </div>
                     <div className="flex space-x-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button variant="outline" size="sm" className="flex-1" disabled> {/* TODO: Implement Manage */}
                         Manage
                       </Button>
-                      <Button size="sm" className="flex-1">
+                      <Button size="sm" className="flex-1" disabled> {/* TODO: Implement View Workers */}
                         View Workers
                       </Button>
                     </div>
@@ -480,7 +469,7 @@ export default function EnterpriseDashboard() {
 
         <TabsContent value="operations" className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold">Bulk Operations</h2>
+            <h2 className="text-2xl font-bold">All Bulk Operations</h2>
             <p className="text-muted-foreground">
               Track and manage all bulk job operations
             </p>
@@ -491,58 +480,59 @@ export default function EnterpriseDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Operation ID</TableHead>
+                    <TableHead className="w-[200px]">Operation ID</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Total Jobs</TableHead>
-                    <TableHead>Successful</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Processed</TableHead>
                     <TableHead>Failed</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Started</TableHead>
+                    <TableHead>Completed</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {operationsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">
+                      <TableCell colSpan={9} className="text-center">
                         Loading operations...
                       </TableCell>
                     </TableRow>
                   ) : bulkOperations && bulkOperations.length > 0 ? (
-                    bulkOperations.map((operation) => (
+                    bulkOperations.map((operation: BulkJobOperation) => (
                       <TableRow key={operation.id}>
-                        <TableCell className="font-mono text-sm">
+                        <TableCell className="font-mono text-xs truncate" title={operation.id}>
                           {operation.id}
                         </TableCell>
                         <TableCell className="capitalize">{operation.type}</TableCell>
                         <TableCell>{operation.totalJobs || 0}</TableCell>
-                        <TableCell className="text-green-600">
-                          {operation.successfulJobs || 0}
+                        <TableCell className="text-blue-600">
+                          {operation.processedJobs || 0}
                         </TableCell>
                         <TableCell className={(operation.failedJobs || 0) > 0 ? 'text-red-600' : ''}>
                           {operation.failedJobs || 0}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={
-                            operation.status === 'completed' ? 'default' :
-                            operation.status === 'partial' ? 'secondary' : 'destructive'
-                          }>
+                          <Badge variant={getOperationStatusBadgeVariant(operation.status)}>
                             {operation.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {new Date(operation.createdAt).toLocaleString()}
+                          {new Date(operation.startedAt).toLocaleString()}
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm">
-                            View Details
+                          {operation.completedAt ? new Date(operation.completedAt).toLocaleString() : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" disabled> {/* TODO: Implement View Details/Errors */}
+                            Details
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground">
                         No bulk operations found
                       </TableCell>
                     </TableRow>

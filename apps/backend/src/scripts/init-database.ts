@@ -9,7 +9,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { config } from '../config/env';
 import { 
   testDatabaseConnection, 
   closeDatabaseConnection,

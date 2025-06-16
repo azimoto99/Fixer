@@ -3,6 +3,8 @@ export * from './user';
 export * from './job';
 export * from './payment';
 export * from './review';
+export * from './notification';
+export * from './enterprise';
 export * from './api';
 
 // Re-export commonly used types for convenience
@@ -28,6 +30,17 @@ export type {
   Review,
   ReviewStats,
 } from './review';
+
+export type {
+  Notification,
+} from './notification';
+
+export type {
+  EnterpriseClient,
+  JobTemplate,
+  WorkerPool,
+  BulkJobOperation,
+} from './enterprise';
 
 export type {
   ApiResponse,

@@ -1,7 +1,35 @@
-import { API_ENDPOINTS } from '@fixer/shared';
-import type { Job, JobApplication, User } from '@fixer/shared';
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+
+// API endpoints for the fixer-work app
+const API_ENDPOINTS = {
+  AUTH: {
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    LOGOUT: '/auth/logout',
+  },
+  JOBS: {
+    LIST: '/jobs',
+    SEARCH: '/jobs/search',
+    NEARBY: '/jobs/nearby',
+    DETAIL: '/jobs/:id',
+    CREATE: '/jobs',
+    APPLY: '/jobs/:id/applications',
+  },
+  APPLICATIONS: {
+    LIST: '/applications',
+    MY_APPLICATIONS: '/applications/my-applications',
+    DETAIL: '/applications/:id',
+    CREATE: '/applications',
+    ACCEPT: '/applications/:id/accept',
+    REJECT: '/applications/:id/reject',
+    WITHDRAW: '/applications/:id/withdraw',
+  },
+  USERS: {
+    PROFILE: '/users/profile',
+    WORKER_PROFILE: '/users/worker-profile',
+    UPDATE_PROFILE: '/users/profile',
+  },
+};
 
 interface ApiResponse<T> {
   success: boolean;

@@ -87,16 +87,20 @@ export function MapView({ jobs, userLocation }: MapViewProps) {
       el.className = 'job-marker';
       
       // Style based on urgency
-      const urgencyColors = {
+      const urgencyColors: Record<string, string> = {
         low: '#3b82f6', // blue
-        normal: '#22c55e', // green
+        medium: '#22c55e', // green
         high: '#f97316', // orange
         urgent: '#ef4444', // red
       };
       
+      // Get price from budget object
+      const displayPrice = job.budget?.amount || 0;
+      const budgetSuffix = job.budget?.type === 'hourly' ? '/hr' : '';
+      
       el.innerHTML = `
-        <div class="marker-container" style="background-color: ${urgencyColors[job.urgency]};">
-          <div class="marker-price">$${Math.round(job.price)}</div>
+        <div class="marker-container" style="background-color: ${urgencyColors[job.urgency] || urgencyColors.medium};">
+          <div class="marker-price">$${Math.round(displayPrice)}</div>
         </div>
       `;
       
@@ -106,7 +110,7 @@ export function MapView({ jobs, userLocation }: MapViewProps) {
           <div class="map-popup">
             <h3 class="font-medium text-sm">${job.title}</h3>
             <div class="text-xs text-gray-500">${job.category}</div>
-            <div class="text-xs font-medium mt-1">$${job.price}${job.priceType === 'hourly' ? '/hr' : ''}</div>
+            <div class="text-xs font-medium mt-1">$${displayPrice}${budgetSuffix}</div>
           </div>
         `);
       
@@ -160,7 +164,7 @@ export function MapView({ jobs, userLocation }: MapViewProps) {
         </div>
       )}
       
-      <style jsx>{`
+      <style>{`
         .job-marker {
           cursor: pointer;
         }
