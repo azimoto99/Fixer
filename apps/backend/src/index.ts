@@ -12,6 +12,7 @@ import applicationRoutes from './routes/applications';
 import userRoutes from './routes/users';
 import paymentRoutes from './routes/payments';
 import enterpriseRoutes from './routes/enterprise';
+import stripeRoutes from './routes/stripe';
 
 const app = express();
 
@@ -91,6 +92,7 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/enterprise', enterpriseRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 // 404 handler for unknown API routes only
 app.use('/api/*', (req, res) => {

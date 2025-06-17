@@ -16,6 +16,7 @@ import { PaymentsPage } from '@/pages/payments/PaymentsPage';
 import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
 import EnterpriseDashboard from '@/pages/EnterpriseDashboard';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { PayJobPage } from '@/pages/jobs/PayJobPage';
 
 // Protected route wrapper
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -53,6 +54,12 @@ function App() {
             <Route path="jobs/:id" element={
               <ProtectedRoute>
                 <JobDetailPage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="jobs/:id/pay" element={
+              <ProtectedRoute>
+                <PayJobPage />
               </ProtectedRoute>
             } />
             

@@ -17,14 +17,25 @@ const router = Router();
 // All enterprise routes require authentication
 router.use(authMiddleware);
 
-// Helper function to get enterprise for user
+// Helper function to get enterprise for user (for now, return a mock enterprise)
 async function getEnterpriseForUser(userId: string) {
-  const enterprise = await db.select()
-    .from(enterpriseClients)
-    .where(eq(enterpriseClients.contactUserId, userId))
-    .limit(1);
-  
-  return enterprise.length > 0 ? enterprise[0] : null;
+  // For development, return a mock enterprise client
+  // In production, you would query based on account manager or contact relationship
+  return {
+    id: 'mock-enterprise-id',
+    companyName: 'Mock Enterprise Corp',
+    industry: 'Technology',
+    contactEmail: 'contact@mockenterprise.com',
+    contactPhone: '+1-555-0123',
+    billingAddress: { address: '123 Business St', city: 'San Francisco', state: 'CA', zipCode: '94101' },
+    taxId: 'TAX123456',
+    paymentTerms: 30,
+    accountManagerId: userId,
+    tier: 'premium',
+    settings: {},
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
 }
 
 // Helper function to verify authentication and get user ID

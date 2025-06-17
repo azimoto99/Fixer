@@ -156,3 +156,15 @@ export function useLogout() {
     },
   });
 }
+
+export function useCreateStripeOnboardingLink() {
+  return useMutation({
+    mutationFn: api.createStripeOnboardingLink.bind(api),
+  });
+}
+
+export function useRefreshStripeStatus() {
+  return useMutation({
+    mutationFn: api.refreshStripeStatus.bind(api),
+  });
+}

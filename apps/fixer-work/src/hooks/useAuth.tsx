@@ -6,10 +6,12 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.warn('Missing Supabase environment variables - using mock auth');
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 interface AuthContextType {
   user: User | null;
@@ -27,13 +29,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabase) {
       // Mock user for development when Supabase is not configured
       setUser({
-        id: 'mock-poster-id',
-        email: 'poster@example.com',
-        firstName: 'Jane',
-        lastName: 'Poster',
+        id: 'mock-user-id',
+        email: 'worker@example.com',
+        firstName: 'John',
+        lastName: 'Worker',
         avatar: undefined,
         phone: undefined,
         createdAt: new Date().toISOString(),
@@ -85,19 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (credentials: LoginRequest) => {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      // Mock login for development
-      setUser({
-        id: 'mock-poster-id',
-        email: credentials.email,
-        firstName: 'Jane',
-        lastName: 'Poster',
-        avatar: undefined,
-        phone: undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      return;
+    if (!supabase) {
+      throw new Error('Authentication not configured');
     }
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -111,19 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (data: RegisterRequest) => {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      // Mock registration for development
-      setUser({
-        id: 'mock-poster-id',
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        avatar: undefined,
-        phone: data.phone,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      return;
+    if (!supabase) {
+      throw new Error('Authentication not configured');
     }
 
     const { error } = await supabase.auth.signUp({
@@ -133,8 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           firstName: data.firstName,
           lastName: data.lastName,
-          role: data.role,
-          phone: data.phone,
+          role: 'worker', // Workers use the work app
         },
       },
     });
@@ -145,6 +124,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (!supabase) {
+      setUser(null);
+      return;
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       throw new Error(error.message);
@@ -152,6 +136,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateProfile = async (data: Partial<User>) => {
+    if (!supabase || !user) {
+      throw new Error('Not authenticated');
+    }
+
     const { error } = await supabase.auth.updateUser({
       data: {
         firstName: data.firstName,
@@ -165,10 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(error.message);
     }
 
-    // Update local user state
-    if (user) {
-      setUser({ ...user, ...data });
-    }
+    setUser(prev => prev ? { ...prev, ...data } : null);
   };
 
   const value = {

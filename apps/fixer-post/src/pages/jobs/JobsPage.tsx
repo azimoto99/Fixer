@@ -163,6 +163,13 @@ export function JobsPage() {
                       </Link>
                     </Button>
                   )}
+                  {job.status === 'completed' && (
+                    <Button size="sm" asChild>
+                      <Link to={`/jobs/${job.id}/pay`}>
+                        Pay Worker
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>

@@ -255,7 +255,6 @@ export const notifications = pgTable(
 // ENTERPRISE TABLES
 // ============================================================================
 
-// Enterprise clients table
 export const enterpriseClients = pgTable(
   'enterprise_clients',
   {
@@ -264,20 +263,18 @@ export const enterpriseClients = pgTable(
     industry: text('industry').notNull(),
     contactEmail: text('contact_email').notNull(),
     contactPhone: text('contact_phone'),
-    contactUserId: uuid('contact_user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
     billingAddress: jsonb('billing_address').notNull(),
     taxId: text('tax_id'),
     paymentTerms: integer('payment_terms').default(30), // net 30, etc.
     accountManagerId: uuid('account_manager_id').references(() => users.id),
     tier: text('tier').default('standard'), // standard, premium, enterprise
-    settings: jsonb('settings').default('{}'),
+    settings: jsonb('settings').default(sql`'{}'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => ({
-    contactUserIdIdx: index('idx_enterprise_clients_contact_user_id').on(table.contactUserId),
+  (table: any) => ({
     companyNameIdx: index('idx_enterprise_clients_company_name').on(table.companyName),
-    tierIdx: index('idx_enterprise_clients_tier').on(table.tier),
+    industryIdx: index('idx_enterprise_clients_industry').on(table.industry),
   })
 );
 
@@ -290,14 +287,14 @@ export const jobTemplates = pgTable(
     name: text('name').notNull(),
     description: text('description'),
     jobDefaults: jsonb('job_defaults').notNull(),
-    locations: jsonb('locations').notNull().default('[]'),
+    locations: jsonb('locations').default(sql`'[]'::jsonb`).notNull(),
     scheduleTemplate: jsonb('schedule_template').notNull(),
     autoPublish: boolean('auto_publish').default(true),
-    workerPoolId: uuid('worker_pool_id'), // Will reference worker_pools once created
+    workerPoolId: uuid('worker_pool_id').references(() => workerPools.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => ({
+  (table: any) => ({
     enterpriseIdIdx: index('idx_job_templates_enterprise_id').on(table.enterpriseId),
     nameIdx: index('idx_job_templates_name').on(table.name),
   })
@@ -312,14 +309,13 @@ export const workerPools = pgTable(
     name: text('name').notNull(),
     description: text('description'),
     criteria: jsonb('criteria').notNull(), // skills, ratings, background check status
-    workerIds: jsonb('worker_ids').default('[]'), // array of worker IDs
+    workerIds: uuid('worker_ids').array().default(sql`'{}'::uuid[]`),
     autoInvite: boolean('auto_invite').default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => ({
+  (table: any) => ({
     enterpriseIdIdx: index('idx_worker_pools_enterprise_id').on(table.enterpriseId),
-    nameIdx: index('idx_worker_pools_name').on(table.name),
   })
 );
 
@@ -334,15 +330,15 @@ export const bulkJobOperations = pgTable(
     successfulJobs: integer('successful_jobs').default(0),
     failedJobs: integer('failed_jobs').default(0),
     status: text('status').default('pending'), // pending, processing, completed, failed
-    errorDetails: jsonb('error_details').default('{}'),
-    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'cascade' }),
-    startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+    errorDetails: jsonb('error_details').default(sql`'{}'::jsonb`),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    startedAt: timestamp('started_at', { withTimezone: true }).defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
   },
-  (table) => ({
+  (table: any) => ({
     enterpriseIdIdx: index('idx_bulk_job_operations_enterprise_id').on(table.enterpriseId),
     statusIdx: index('idx_bulk_job_operations_status').on(table.status),
-    createdByIdx: index('idx_bulk_job_operations_created_by').on(table.createdBy),
+    operationTypeIdx: index('idx_bulk_job_operations_operation_type').on(table.operationType),
   })
 );
 
@@ -350,122 +346,138 @@ export const bulkJobOperations = pgTable(
 // RELATIONS
 // ============================================================================
 
-export const usersRelations = relations(users, ({ one, many }) => ({
-  workerProfile: one(workerProfiles, {
-    fields: [users.id],
-    references: [workerProfiles.userId],
-  }),
-  postedJobs: many(jobs, { relationName: 'poster' }),
-  assignedJobs: many(jobs, { relationName: 'worker' }),
-  applications: many(applications),
-  paymentsAsPoster: many(payments, { relationName: 'poster' }),
-  paymentsAsWorker: many(payments, { relationName: 'worker' }),
-  notifications: many(notifications),
-}));
+export const usersRelations = relations(users,
+  ({ one, many }: any) => ({
+    workerProfile: one(workerProfiles, {
+      fields: [users.id],
+      references: [workerProfiles.userId],
+    }),
+    postedJobs: many(jobs, { relationName: 'poster' }),
+    assignedJobs: many(jobs, { relationName: 'worker' }),
+    applications: many(applications),
+    paymentsAsPoster: many(payments, { relationName: 'poster' }),
+    paymentsAsWorker: many(payments, { relationName: 'worker' }),
+    notifications: many(notifications),
+  })
+);
 
-export const workerProfilesRelations = relations(workerProfiles, ({ one }) => ({
-  user: one(users, {
-    fields: [workerProfiles.userId],
-    references: [users.id],
-  }),
-}));
+export const workerProfilesRelations = relations(workerProfiles,
+  ({ one }: any) => ({
+    user: one(users, {
+      fields: [workerProfiles.userId],
+      references: [users.id],
+    }),
+  })
+);
 
-export const jobsRelations = relations(jobs, ({ one, many }) => ({
-  poster: one(users, {
-    fields: [jobs.posterId],
-    references: [users.id],
-    relationName: 'poster',
-  }),
-  worker: one(users, {
-    fields: [jobs.workerId],
-    references: [users.id],
-    relationName: 'worker',
-  }),
-  enterprise: one(enterpriseClients, {
-    fields: [jobs.enterpriseId],
-    references: [enterpriseClients.id],
-  }),
-  applications: many(applications),
-  payments: many(payments),
-}));
+export const jobsRelations = relations(jobs,
+  ({ one, many }: any) => ({
+    poster: one(users, {
+      fields: [jobs.posterId],
+      references: [users.id],
+      relationName: 'poster',
+    }),
+    worker: one(users, {
+      fields: [jobs.workerId],
+      references: [users.id],
+      relationName: 'worker',
+    }),
+    enterprise: one(enterpriseClients, {
+      fields: [jobs.enterpriseId],
+      references: [enterpriseClients.id],
+    }),
+    applications: many(applications),
+    payments: many(payments),
+  })
+);
 
-export const applicationsRelations = relations(applications, ({ one }) => ({
-  job: one(jobs, {
-    fields: [applications.jobId],
-    references: [jobs.id],
-  }),
-  worker: one(users, {
-    fields: [applications.workerId],
-    references: [users.id],
-  }),
-}));
+export const applicationsRelations = relations(applications,
+  ({ one }: any) => ({
+    job: one(jobs, {
+      fields: [applications.jobId],
+      references: [jobs.id],
+    }),
+    worker: one(users, {
+      fields: [applications.workerId],
+      references: [users.id],
+    }),
+  })
+);
 
-export const paymentsRelations = relations(payments, ({ one }) => ({
-  job: one(jobs, {
-    fields: [payments.jobId],
-    references: [jobs.id],
-  }),
-  poster: one(users, {
-    fields: [payments.posterId],
-    references: [users.id],
-    relationName: 'poster',
-  }),
-  worker: one(users, {
-    fields: [payments.workerId],
-    references: [users.id],
-    relationName: 'worker',
-  }),
-}));
+export const paymentsRelations = relations(payments,
+  ({ one }: any) => ({
+    job: one(jobs, {
+      fields: [payments.jobId],
+      references: [jobs.id],
+    }),
+    poster: one(users, {
+      fields: [payments.posterId],
+      references: [users.id],
+      relationName: 'poster',
+    }),
+    worker: one(users, {
+      fields: [payments.workerId],
+      references: [users.id],
+      relationName: 'worker',
+    }),
+  })
+);
 
-export const notificationsRelations = relations(notifications, ({ one }) => ({
-  user: one(users, {
-    fields: [notifications.userId],
-    references: [users.id],
-  }),
-}));
+export const notificationsRelations = relations(notifications,
+  ({ one }: any) => ({
+    user: one(users, {
+      fields: [notifications.userId],
+      references: [users.id],
+    }),
+  })
+);
 
-export const enterpriseClientsRelations = relations(enterpriseClients, ({ one, many }) => ({
-  contactUser: one(users, {
-    fields: [enterpriseClients.contactUserId],
-    references: [users.id],
-  }),
-  accountManager: one(users, {
-    fields: [enterpriseClients.accountManagerId],
-    references: [users.id],
-  }),
-  jobTemplates: many(jobTemplates),
-  workerPools: many(workerPools),
-  bulkJobOperations: many(bulkJobOperations),
-}));
+export const enterpriseClientsRelations = relations(enterpriseClients,
+  ({ one, many }: any) => ({
+    accountManager: one(users, {
+      fields: [enterpriseClients.accountManagerId],
+      references: [users.id],
+    }),
+    jobTemplates: many(jobTemplates),
+    workerPools: many(workerPools),
+    bulkJobOperations: many(bulkJobOperations),
+  })
+);
 
-export const jobTemplatesRelations = relations(jobTemplates, ({ one }) => ({
-  enterprise: one(enterpriseClients, {
-    fields: [jobTemplates.enterpriseId],
-    references: [enterpriseClients.id],
-  }),
-  workerPool: one(workerPools, {
-    fields: [jobTemplates.workerPoolId],
-    references: [workerPools.id],
-  }),
-}));
+export const jobTemplatesRelations = relations(jobTemplates,
+  ({ one }: any) => ({
+    enterprise: one(enterpriseClients, {
+      fields: [jobTemplates.enterpriseId],
+      references: [enterpriseClients.id],
+    }),
+    workerPool: one(workerPools, {
+      fields: [jobTemplates.workerPoolId],
+      references: [workerPools.id],
+    }),
+  })
+);
 
-export const workerPoolsRelations = relations(workerPools, ({ one }) => ({
-  enterprise: one(enterpriseClients, {
-    fields: [workerPools.enterpriseId],
-    references: [enterpriseClients.id],
-  }),
-}));
+export const workerPoolsRelations = relations(workerPools,
+  ({ one }: any) => ({
+    enterprise: one(enterpriseClients, {
+      fields: [workerPools.enterpriseId],
+      references: [enterpriseClients.id],
+    }),
+  })
+);
 
-export const bulkJobOperationsRelations = relations(bulkJobOperations, ({ one }) => ({
-  enterprise: one(enterpriseClients, {
-    fields: [bulkJobOperations.enterpriseId],
-    references: [enterpriseClients.id],
-  }),
-  createdBy: one(users, {
-    fields: [bulkJobOperations.createdBy],
-    references: [users.id],
-  }),
-}));
+export const bulkJobOperationsRelations = relations(bulkJobOperations,
+  ({ one }: any) => ({
+    enterprise: one(enterpriseClients, {
+      fields: [bulkJobOperations.enterpriseId],
+      references: [enterpriseClients.id],
+    }),
+    createdBy: one(users, {
+      fields: [bulkJobOperations.createdBy],
+      references: [users.id],
+    }),
+  })
+);
 
 // ============================================================================
 // ZOD SCHEMAS FOR VALIDATION
